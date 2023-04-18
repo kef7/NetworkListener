@@ -5,15 +5,24 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UserSecretsId>10a3d61c-0705-428a-bb90-cd48d0e7e0c8</UserSecretsId>
-		<Product>NetworkListener</Product>
-		<Description>Network listener</Description>
-		<Authors>kef</Authors>
 		<Version>1.0.0-alpha</Version>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+		<Authors>kef7</Authors>
+		<Description>Network listener</Description>
+		<IsPackable>true</IsPackable>
+		<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+		<PackageTags>Network listener; socket listener;.NET 6</PackageTags>
   </PropertyGroup>
 	
 	<PropertyGroup Condition="'$(Configuration)' != 'Release'">
 		<Version>$(Version)-$(Configuration)</Version>
 	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="..\LICENSE.txt" Pack="true" PackagePath="$(PackageLicenseFile)">
+			<Visible>false</Visible>
+		</None>
+	</ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="6.0.1" />
