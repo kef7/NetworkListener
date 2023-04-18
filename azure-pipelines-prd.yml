@@ -1,0 +1,62 @@
+# Build pipeline trigger
+trigger:
+- master
+
+# Pool resources for build
+pool:
+  vmImage: ubuntu-latest
+
+# Variables for build and pack
+variables:
+- group: 'NetworkListener_VarGroup'
+
+# Init steps
+steps:
+
+# Setup dotnet version
+- task: UseDotNet@2
+  inputs:
+    version: $(dotNetVersion)
+    includePreviewVersions: false
+
+# Restore dependancies
+- task: DotNetCoreCLI@2
+  displayName: 'dotnet restore'  
+  inputs:
+    command: restore
+
+# Build lib
+- task: DotNetCoreCLI@2
+  displayName: 'dotnet build'
+  inputs:
+    command: build
+    arguments: '--configuration $(buildConfiguration)'
+    projects: '$(projFilePath)'
+
+# Package lib
+- task: DotNetCoreCLI@2
+  displayName: 'dotnet pack'
+  inputs:
+    command: pack
+    arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+    packagesToPack: '$(projFilePath)'
+    nobuild: true
+    versioningScheme: off
+
+# Publish to artifacts staging directory
+- task: PublishPipelineArtifact@1
+  displayName: 'publish to artifacts staging'
+  inputs:
+    targetPath: $(Build.ArtifactStagingDirectory)
+
+# Push package to internal feed
+- task: NuGetCommand@2
+  displayName: 'nuget push internal feed'
+  inputs:
+    command: push
+    feedsToUse: select
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+    nuGetFeedType: internal
+    publishVstsFeed: '$(projectName)/$(feedName)'
+    versioningScheme: off
+    allowPackageConflicts: true
