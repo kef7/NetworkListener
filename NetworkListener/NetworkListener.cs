@@ -13,6 +13,27 @@
     public class NetworkListener : IDisposable
     {
         /// <summary>
+        /// Client thread meta-data
+        /// </summary>
+        internal struct ClientThreadMeta
+        {
+            /// <summary>
+            /// Client thread name
+            /// </summary>
+            public string Name { get; set; }
+
+            /// <summary>
+            /// Client thread
+            /// </summary>
+            public Thread Thread { get; set; }
+
+            /// <summary>
+            /// Cancellation token for client thread cancellation
+            /// </summary>
+            public CancellationTokenSource CancellationTokenSource { get; set; }
+        }
+
+        /// <summary>
         /// Client thread monitor run delay
         /// </summary>
         private const int MONITOR_DELAY = 5000;
@@ -40,7 +61,7 @@
         /// <summary>
         /// Client connection threads
         /// </summary>
-        private ICollection<Thread> _clientThreads = new List<Thread>();
+        private ICollection<ClientThreadMeta> _clientThreads = new List<ClientThreadMeta>();
 
         /// <summary>
         /// Clients monitor thread
@@ -246,6 +267,8 @@
                     ListenerSocket.Listen(Port);
 
                     Logger.LogInformation("Listening on end point {EndPoint}", ipEndPoint);
+
+                    // TODO: Started event
                 }
                 catch (Exception ex)
                 {
@@ -293,6 +316,8 @@
                         // Accept client connection
                         var socket = await ListenerSocket.AcceptAsync(CancellationToken);
 
+                        // TODO: Client accepted event
+
                         // Check for cancellation
                         if (CancellationToken.IsCancellationRequested)
                         {
@@ -304,6 +329,9 @@
                         {
                             // Name client
                             var clientName = $"Client-{clientCntr++}";
+
+                            // Client cancellation token source
+                            var cts = new CancellationTokenSource();
 
                             Logger.LogTrace("Remote client connected from {RemoteEndPoint} and named {ClientName}", socket.RemoteEndPoint, clientName);
 
@@ -318,7 +346,7 @@
                                     // trigger a async thread and the main thread here will leave
                                     // execution causing count to drop and monitor thread to
                                     // remove from list.
-                                    Task.WaitAll(new Task[] { ProcessConnection(socket) }, CancellationToken);
+                                    Task.WaitAll(new Task[] { ProcessConnection(socket, cts.Token) }, cts.Token);
                                 }
                                 catch (OperationCanceledException)
                                 {
@@ -336,12 +364,20 @@
                             thread.Name = clientName;
                             thread.Priority = ThreadPriority.Normal;
 
-                            // Add to list of client threads
+                            // Build client thread meta
+                            var ctMeta = new ClientThreadMeta
+                            {
+                                Name = clientName,
+                                Thread = thread,
+                                CancellationTokenSource = cts
+                            };
+
+                            // Add meta to list of client threads
                             if (Monitor.TryEnter(_lock))
                             {
                                 try
                                 {
-                                    _clientThreads.Add(thread);
+                                    _clientThreads.Add(ctMeta);
                                 }
                                 finally
                                 {
@@ -352,7 +388,7 @@
                             {
                                 lock (_lock)
                                 {
-                                    _clientThreads.Add(thread);
+                                    _clientThreads.Add(ctMeta);
                                 }
                             }
 
@@ -387,7 +423,8 @@
                     CancellationToken = _cts.Token;
                 }
 
-                // TODO: Clean up client threads (close connections and stop threads)
+                // Clean up client threads
+                CancelAndRemoveClientThreads();
 
                 Logger.LogTrace("Exit listener.");
             }
@@ -425,8 +462,9 @@
         /// Process accepted client socket connection which is done in <see cref="Listen(CancellationToken?)"/>
         /// </summary>
         /// <param name="clientSocket">The accepted client socket</param>
+        /// <param name="cancellationToken">A cancellation token to cancel the client socket processing</param>
         /// <returns></returns>
-        private async Task ProcessConnection(Socket clientSocket)
+        private async Task ProcessConnection(Socket clientSocket, CancellationToken cancellationToken)
         {
             if (clientSocket is null)
             {
@@ -462,7 +500,14 @@
                         var buffer = new byte[maxBufferSize];
 
                         // Receive message from client
-                        var received = await clientSocket.ReceiveAsync(buffer, SocketFlags.None, CancellationToken);
+                        var received = await clientSocket.ReceiveAsync(buffer, SocketFlags.None, cancellationToken);
+
+                        // Check cancellation
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            Logger.LogTrace("{ClientName} - Cancellation requested for client.", clientName);
+                            break;
+                        }
 
                         // Get encoded message
                         var message = NetworkCommunicationProcessor.Encode(buffer);
@@ -482,6 +527,13 @@
                             RemoteEndPoint = remoteEndPoint
                         });
 
+                        // Check cancellation
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            Logger.LogTrace("{ClientName} - Cancellation requested for client.", clientName);
+                            break;
+                        }
+
                         // Trigger message acknowledgment
                         if (ackMessage != null)
                         {
@@ -491,7 +543,7 @@
                             var ackMessageBytes = NetworkCommunicationProcessor.Decode(ackMessage);
 
                             // Send acknowledgment message to client
-                            _ = await clientSocket.SendAsync(ackMessageBytes, SocketFlags.None, CancellationToken);
+                            _ = await clientSocket.SendAsync(ackMessageBytes, SocketFlags.None, cancellationToken);
                         }
                     }
                     catch (OperationCanceledException)
@@ -504,20 +556,36 @@
                     }
                 } // End - if available
 
+                // Check cancellation
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    Logger.LogTrace("{ClientName} - Cancellation requested for client.", clientName);
+                    break;
+                }
+
                 // Disconnect if needed
                 if (!clientSocket.IsConnected())
                 {
                     Logger.LogInformation("{ClientName} - Client disconnected.", clientName);
+                    // TODO: Client disconnected event
                     break;
                 }
 
                 // Wait a bit
                 Thread.Sleep(300);
 
+                // Check cancellation
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    Logger.LogTrace("{ClientName} - Cancellation requested for client.", clientName);
+                    break;
+                }
+
                 // Disconnect if needed
                 if (!clientSocket.IsConnected())
                 {
                     Logger.LogInformation("{ClientName} - Client disconnected.", clientName);
+                    // TODO: Client disconnected event
                     break;
                 }
 
@@ -525,6 +593,7 @@
                 if ((loopCntr % 10) == 0 || loopCntr == 0)
                 {
                     Logger.LogTrace("{ClientName} - Still processing; currently on [{LoopCounter}] iteration.", clientName, loopCntr);
+                    // TODO: Client heartbeat event
                 }
 
                 // Increment loop counter; reset if needed
@@ -555,6 +624,8 @@
             {
                 Logger.LogTrace("Starting clients thread monitor.");
                 _monitorThread.Start();
+
+                // TODO: Client monitoring started event?
             }
         }
 
@@ -657,24 +728,23 @@
         {
             if (_clientThreads.Count > 0)
             {
-                // New-up threads to remove container
-                var removeThese = new List<Thread>();
-
                 // Lock it up to work on removal
                 if (Monitor.TryEnter(_lock))
                 {
                     try
                     {
+                        // New-up threads to remove container
+                        var removeThese = new List<ClientThreadMeta>();
+
                         Logger.LogTrace("Checking for stopped client threads.");
 
                         // Get threads to remove
                         for (var i = 0; i < _clientThreads.Count; i++)
                         {
-                            var thread = _clientThreads.ElementAt(i);
-                            if (thread.ThreadState == ThreadState.Stopped)
-                            // Shows thread is stopped but logs from processing still going on from within thread... ?
+                            var meta = _clientThreads.ElementAt(i);
+                            if (meta.Thread.ThreadState == ThreadState.Stopped)
                             {
-                                removeThese.Add(thread);
+                                removeThese.Add(meta);
                             }
                         }
 
@@ -684,10 +754,18 @@
                             Logger.LogTrace("Removing client threads.");
 
                             // Remove threads
-                            foreach (var thread in removeThese)
+                            foreach (var meta in removeThese)
                             {
-                                _clientThreads.Remove(thread);
+                                // Remove from list
+                                _clientThreads.Remove(meta);
                             }
+                        }
+
+                        // Call garbage collector
+                        if (removeThese.Count > 0)
+                        {
+                            Logger.LogTrace("Force GC.");
+                            GC.Collect();
                         }
                     }
                     finally
@@ -699,12 +777,47 @@
                 {
                     Logger.LogWarning("Could not get lock on object to clean up client threads.");
                 }
+            }
+        }
 
-                // Call garbage collector
-                if (removeThese.Count > 0)
+        /// <summary>
+        /// Cancel running client threads and remove them from monitoring
+        /// </summary>
+        private void CancelAndRemoveClientThreads()
+        {
+            if (_clientThreads.Count > 0)
+            {
+                // Lock it up to work on removal
+                if (Monitor.TryEnter(_lock))
                 {
-                    Logger.LogTrace("Force GC.");
-                    GC.Collect();
+                    try
+                    {
+                        Logger.LogTrace("Canceling client threads.");
+
+                        // Get threads to remove
+                        for (var i = 0; i < _clientThreads.Count; i++)
+                        {
+                            // Get meta
+                            var meta = _clientThreads.ElementAt(i);
+
+                            // Cancel thread first
+                            meta.CancellationTokenSource.Cancel();
+
+                            // Remove from list
+                            _clientThreads.Remove(meta);
+                        }
+
+                        Logger.LogTrace("Force GC.");
+                        GC.Collect();
+                    }
+                    finally
+                    {
+                        Monitor.Exit(_lock);
+                    }
+                }
+                else
+                {
+                    Logger.LogWarning("Could not get lock on object to cancel client threads.");
                 }
             }
         }
@@ -730,26 +843,36 @@
         /// </summary>
         public void Dispose()
         {
-            if (_monitorThread != null)
-            {
-                _monitorThread.Interrupt();
-            }
+            // Cancel and remove client threads
+            CancelAndRemoveClientThreads();
 
             // Cancel
             _cts.Cancel();
 
+            // Wait
+            Thread.Sleep(200);
+
+            // Handle client monitor thread
+            if (_monitorThread != null)
+            {
+                if (_monitorThread.ThreadState == ThreadState.WaitSleepJoin)
+                {
+                    _monitorThread.Interrupt();
+                }
+
+                // Wait
+                Thread.Sleep(100);
+
+                _monitorThread = null;
+            }
+
+            // Dispose listener
             if (ListenerSocket != null)
             {
                 ListenerSocket.Shutdown(SocketShutdown.Both);
                 ListenerSocket.Close();
                 ListenerSocket.Dispose();
                 ListenerSocket = null;
-            }
-
-            if (_clientThreads.Count > 0)
-            {
-                // Clean up stopped client threads
-                CleanUpStoppedClientThreads();
             }
         }
     }
