@@ -9,6 +9,10 @@ pool:
 # Variables for build and pack
 variables:
 - group: 'NetworkListener_VarGroup'
+- name: 'buildConfiguration'
+  value: 'Release'
+- name: 'projFilePath'
+  value: './NetworkListener/NetworkListener.proj'
 
 # Init steps
 steps:
