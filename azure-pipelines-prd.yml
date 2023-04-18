@@ -12,7 +12,7 @@ variables:
 - name: 'buildConfiguration'
   value: 'Release'
 - name: 'projFilePath'
-  value: './NetworkListener/NetworkListener.proj'
+  value: './NetworkListener/NetworkListener.csproj'
 
 # Init steps
 steps:
