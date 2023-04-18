@@ -64,6 +64,11 @@
         public event EventHandler<ClientWaitingEventArgs>? ClientWaiting = null;
 
         /// <summary>
+        /// Client error event signature
+        /// </summary>
+        public event EventHandler<ClientErrorEventArgs>? ClientError = null;
+
+        /// <summary>
         /// Backing field to property <see cref="MaxClientConnections"/>
         /// </summary>
         private int _maxClientConnections = 7300;
@@ -375,6 +380,14 @@
                                     // Get base exception
                                     var ex = aggEx.GetBaseException();
 
+                                    // Trigger client error event
+                                    ClientError?.Invoke(this, new ClientErrorEventArgs
+                                    {
+                                        Exception = ex,
+                                        RemoteEndPoint = socket.RemoteEndPoint,
+                                        Timestamp = DateTime.UtcNow
+                                    });
+
                                     // Check if canceled
                                     if (ex is OperationCanceledException)
                                     {
@@ -611,6 +624,14 @@
                     catch (Exception ex)
                     {
                         Logger.LogError(ex, "{ClientName} - Error in processing client connection.", clientName);
+
+                        // Trigger client error event
+                        ClientError?.Invoke(this, new ClientErrorEventArgs
+                        {
+                            Exception = ex,
+                            RemoteEndPoint = clientSocket.RemoteEndPoint,
+                            Timestamp = DateTime.UtcNow
+                        });
                     }
                 } // End - if available
 
