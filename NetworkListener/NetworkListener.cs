@@ -378,7 +378,7 @@
                                     // Check if canceled
                                     if (ex is OperationCanceledException)
                                     {
-                                        Logger.LogInformation("Client processing thread canceled.");
+                                        Logger.LogInformation("{ClientName} - Client processing thread canceled.", clientName);
 
                                         // Trigger client disconnected event
                                         OnClientDisconnected(socket, ex as OperationCanceledException);
@@ -531,7 +531,7 @@
             // Get or set client name
             var clientName = Thread.CurrentThread.Name ?? Guid.NewGuid().ToString();
 
-            Logger.LogTrace("{ClientName} - Processing connection from {RemoteEndPoint}", clientName, clientSocket.RemoteEndPoint);
+            Logger.LogInformation("{ClientName} - Processing connection from {RemoteEndPoint}", clientName, clientSocket.RemoteEndPoint);
 
             // Declare vars and kick off loop to process client
             uint loopCntr = 0;
@@ -562,7 +562,7 @@
                         // Check cancellation
                         if (cancellationToken.IsCancellationRequested)
                         {
-                            Logger.LogTrace("{ClientName} - Cancellation requested for client.", clientName);
+                            Logger.LogInformation("{ClientName} - Cancellation requested for client.", clientName);
                             break;
                         }
 
@@ -587,14 +587,14 @@
                         // Check cancellation
                         if (cancellationToken.IsCancellationRequested)
                         {
-                            Logger.LogTrace("{ClientName} - Cancellation requested for client.", clientName);
+                            Logger.LogInformation("{ClientName} - Cancellation requested for client.", clientName);
                             break;
                         }
 
                         // Trigger message acknowledgment
                         if (ackMessage != null)
                         {
-                            Logger.LogTrace("{ClientName} - Sending ACK message to {RemoteEndPoint}. ACK message: {AckMessage}", clientName, remoteEndPoint, ackMessage);
+                            Logger.LogTrace("{ClientName} - Sending ACK message to {RemoteEndPoint}", clientName, remoteEndPoint);
 
                             // Get decoded message
                             var ackMessageBytes = NetworkCommunicationProcessor.Decode(ackMessage);
@@ -606,6 +606,7 @@
                     catch (OperationCanceledException)
                     {
                         Logger.LogInformation("{ClientName} - Client processing canceled.", clientName);
+                        break;
                     }
                     catch (Exception ex)
                     {
@@ -616,7 +617,7 @@
                 // Check cancellation
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    Logger.LogTrace("{ClientName} - Cancellation requested for client.", clientName);
+                    Logger.LogInformation("{ClientName} - Cancellation requested for client.", clientName);
                     break;
                 }
 
@@ -633,7 +634,7 @@
                 // Check cancellation
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    Logger.LogTrace("{ClientName} - Cancellation requested for client.", clientName);
+                    Logger.LogInformation("{ClientName} - Cancellation requested for client.", clientName);
                     break;
                 }
 
