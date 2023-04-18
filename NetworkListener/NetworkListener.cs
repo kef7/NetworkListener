@@ -44,9 +44,24 @@
         private static readonly object _lock = new object();
 
         /// <summary>
+        /// Client connected event signature
+        /// </summary>
+        public event EventHandler<ClientConnectedEventArgs>? ClientConnected = null;
+
+        /// <summary>
+        /// Client disconnected event signature
+        /// </summary>
+        public event EventHandler<ClientDisconnectedEventArgs>? ClientDisconnected = null;
+
+        /// <summary>
         /// Client message received event signature
         /// </summary>
-        public event EventHandler<NetworkListenerReceiveEventArgs>? ClientMessageReceived = null;
+        public event EventHandler<ClientMessageReceievedEventArgs>? ClientMessageReceived = null;
+
+        /// <summary>
+        /// Client waiting for data event signature
+        /// </summary>
+        public event EventHandler<ClientWaitingEventArgs>? ClientWaiting = null;
 
         /// <summary>
         /// Backing field to property <see cref="MaxClientConnections"/>
@@ -170,8 +185,9 @@
         /// CTOR
         /// </summary>
         /// <param name="logger">Required logger for trace logging</param>
-        /// <param name="ipAddress"></param>
-        /// <param name="port"></param>
+        /// <param name="port">Port to listen on</param>
+        /// <param name="maxClientConnections">Max number of client connection</param>
+        /// <param name="networkCommunicationProcessor">The network communication processor to process client messages</param>
         internal NetworkListener(ILogger<NetworkListener> logger, int? port = null, int? maxClientConnections = null, INetworkCommunicationProcessor? networkCommunicationProcessor = null)
         {
             Logger = logger;
@@ -316,7 +332,12 @@
                         // Accept client connection
                         var socket = await ListenerSocket.AcceptAsync(CancellationToken);
 
-                        // TODO: Client accepted event
+                        // Trigger client connected event
+                        ClientConnected?.Invoke(this, new ClientConnectedEventArgs
+                        {
+                            RemoteEndPoint = socket.RemoteEndPoint,
+                            Timestamp = DateTime.UtcNow
+                        });
 
                         // Check for cancellation
                         if (CancellationToken.IsCancellationRequested)
@@ -339,6 +360,7 @@
                             var thread = new Thread(() =>
                             {
                                 // Process the client connection and wait.
+                                var triggeredOnClientDisconnected = false;
                                 try
                                 {
                                     // Must wait here so thread will not die.
@@ -348,14 +370,34 @@
                                     // remove from list.
                                     Task.WaitAll(new Task[] { ProcessConnection(socket, cts.Token) }, cts.Token);
                                 }
-                                catch (OperationCanceledException)
+                                catch (AggregateException aggEx)
                                 {
-                                    Logger.LogInformation("Client processing thread canceled.");
+                                    // Get base exception
+                                    var ex = aggEx.GetBaseException();
+
+                                    // Check if canceled
+                                    if (ex is OperationCanceledException)
+                                    {
+                                        Logger.LogInformation("Client processing thread canceled.");
+
+                                        // Trigger client disconnected event
+                                        OnClientDisconnected(socket, ex as OperationCanceledException);
+                                        triggeredOnClientDisconnected = true;
+                                    }
+                                    // Check if disconnected abruptly
+                                    else if (ex is SocketException sEx && sEx.NativeErrorCode == 10054)
+                                    {
+                                        Logger.LogWarning("{ClientName} - Client disconnected abruptly.", clientName);
+
+                                        // Trigger client disconnected event
+                                        OnClientDisconnected(socket, sEx);
+                                        triggeredOnClientDisconnected = true;
+                                    }
                                 }
                                 finally
                                 {
                                     // Dispose the client connection
-                                    DisposeClient(socket);
+                                    DisposeClient(socket, !triggeredOnClientDisconnected);
                                 }
                             });
 
@@ -520,7 +562,7 @@
                         var ackMessage = NetworkCommunicationProcessor.ProcessCommunication(message, ts, remoteEndPoint);
 
                         // Trigger message received event if needed
-                        ClientMessageReceived?.Invoke(this, new NetworkListenerReceiveEventArgs
+                        ClientMessageReceived?.Invoke(this, new ClientMessageReceievedEventArgs
                         {
                             Message = message,
                             Timestamp = ts,
@@ -567,7 +609,6 @@
                 if (!clientSocket.IsConnected())
                 {
                     Logger.LogInformation("{ClientName} - Client disconnected.", clientName);
-                    // TODO: Client disconnected event
                     break;
                 }
 
@@ -585,15 +626,19 @@
                 if (!clientSocket.IsConnected())
                 {
                     Logger.LogInformation("{ClientName} - Client disconnected.", clientName);
-                    // TODO: Client disconnected event
                     break;
                 }
 
-                // Write heartbeat message
+                // Write waiting message
                 if ((loopCntr % 10) == 0 || loopCntr == 0)
                 {
-                    Logger.LogTrace("{ClientName} - Still processing; currently on [{LoopCounter}] iteration.", clientName, loopCntr);
-                    // TODO: Client heartbeat event
+                    Logger.LogTrace("{ClientName} - Waiting on data; currently on [{LoopCounter}] iteration.", clientName, loopCntr);
+
+                    ClientWaiting?.Invoke(this, new ClientWaitingEventArgs
+                    {
+                        RemoteEndPoint = clientSocket?.RemoteEndPoint,
+                        Timestamp = DateTime.UtcNow
+                    });
                 }
 
                 // Increment loop counter; reset if needed
@@ -605,6 +650,22 @@
             } // End - while true
 
             Logger.LogTrace("{ClientName} - Leaving client connection processing", clientName);
+        }
+
+        /// <summary>
+        /// Invoke client disconnected event
+        /// </summary>
+        /// <param name="clientSocket">The socket that disconnected</param>
+        /// <param name="ex">Optional exception that caused the disconnection</param>
+        private void OnClientDisconnected(Socket clientSocket, Exception? ex = null)
+        {
+            // Invoke client disconnect if possible
+            ClientDisconnected?.Invoke(this, new ClientDisconnectedEventArgs
+            {
+                Exception = ex,
+                RemoteEndPoint = clientSocket?.RemoteEndPoint,
+                Timestamp = DateTime.UtcNow
+            });
         }
 
         /// <summary>
@@ -624,8 +685,6 @@
             {
                 Logger.LogTrace("Starting clients thread monitor.");
                 _monitorThread.Start();
-
-                // TODO: Client monitoring started event?
             }
         }
 
@@ -826,13 +885,24 @@
         /// Dispose client socket
         /// </summary>
         /// <param name="clientSocket">The client socket to dispose off</param>
-        private void DisposeClient(Socket? clientSocket)
+        /// <param name="triggerClientDisconnectedEvent">Flag to indicate this should trigger client 
+        /// disconnected event attached to <see cref="ClientDisconnected"/></param>
+        private void DisposeClient(Socket? clientSocket, bool triggerClientDisconnectedEvent = true)
         {
             if (clientSocket != null)
             {
-                Logger.LogTrace("Disposing client socket for remote endpoint {RemoteEndpoint}", clientSocket.RemoteEndPoint);
-                clientSocket.Shutdown(SocketShutdown.Both);
+                // Disconnect
                 clientSocket.Close();
+
+                // Should we trigger client disconnected event
+                if (triggerClientDisconnectedEvent)
+                {
+                    // Trigger client disconnected event
+                    OnClientDisconnected(clientSocket);
+                }
+
+                // Dispose
+                Logger.LogTrace("Disposing client socket for remote endpoint {RemoteEndpoint}", clientSocket.RemoteEndPoint);
                 clientSocket.Dispose();
                 clientSocket = null;
             }
