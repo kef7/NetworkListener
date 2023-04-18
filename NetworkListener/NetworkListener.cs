@@ -396,8 +396,23 @@
                                 }
                                 finally
                                 {
+                                    // Disconnect
+                                    try
+                                    {
+                                        socket.Disconnect(false);
+                                    }
+                                    finally
+                                    {
+                                        // Should we trigger client disconnected event
+                                        if (!triggeredOnClientDisconnected)
+                                        {
+                                            // Trigger client disconnected event
+                                            OnClientDisconnected(socket);
+                                        }
+                                    }
+
                                     // Dispose the client connection
-                                    DisposeClient(socket, !triggeredOnClientDisconnected);
+                                    DisposeClient(socket);
                                 }
                             });
 
@@ -885,24 +900,12 @@
         /// Dispose client socket
         /// </summary>
         /// <param name="clientSocket">The client socket to dispose off</param>
-        /// <param name="triggerClientDisconnectedEvent">Flag to indicate this should trigger client 
-        /// disconnected event attached to <see cref="ClientDisconnected"/></param>
-        private void DisposeClient(Socket? clientSocket, bool triggerClientDisconnectedEvent = true)
+        private void DisposeClient(Socket? clientSocket)
         {
             if (clientSocket != null)
             {
-                // Disconnect
-                clientSocket.Close();
-
-                // Should we trigger client disconnected event
-                if (triggerClientDisconnectedEvent)
-                {
-                    // Trigger client disconnected event
-                    OnClientDisconnected(clientSocket);
-                }
-
-                // Dispose
                 Logger.LogTrace("Disposing client socket for remote endpoint {RemoteEndpoint}", clientSocket.RemoteEndPoint);
+                clientSocket.Close();
                 clientSocket.Dispose();
                 clientSocket = null;
             }
