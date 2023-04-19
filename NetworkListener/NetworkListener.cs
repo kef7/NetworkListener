@@ -265,7 +265,7 @@
                     // Stop current listener if needed
                     if (ListenerSocket != null)
                     {
-                        Logger.LogTrace("Tearing down old listener.");
+                        Logger.LogTrace("Tearing down old listener");
 
                         ListenerSocket.Shutdown(SocketShutdown.Both);
                         ListenerSocket.Close();
@@ -273,7 +273,7 @@
                         ListenerSocket = null;
                     }
 
-                    Logger.LogTrace("Building new listener.");
+                    Logger.LogTrace("Building new listener");
 
                     // Build IP end point
                     var ipEndPoint = new IPEndPoint(IPAddress, Port);
@@ -293,7 +293,7 @@
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError(ex, "Error in listener setup.");
+                    Logger.LogError(ex, "Error in listener setup");
                     return;
                 }
 
@@ -314,12 +314,12 @@
                         if (!HandleParallelConnections &&
                             ClientThreadCount > 0)
                         {
-                            Logger.LogTrace("Handling multiple connections disabled. Waiting current connection to close...");
+                            Logger.LogTrace("Handling multiple connections disabled. Waiting current connection to close..");
 
                             // Spin wait if having client and should not handle multiple
                             await WaitForClientProcessing(1);
 
-                            Logger.LogTrace("Connection closed; accepting another connection.");
+                            Logger.LogTrace("Connection closed; accepting another connection");
                         }
 
                         // Is client count maxed
@@ -332,7 +332,7 @@
                             await WaitForClientProcessing(MaxClientConnections);
                         }
 
-                        Logger.LogTrace("Waiting to accept client connections.");
+                        Logger.LogTrace("Waiting to accept client connections");
 
                         // Accept client connection
                         var socket = await ListenerSocket.AcceptAsync(CancellationToken);
@@ -391,7 +391,7 @@
                                     // Check if canceled
                                     if (ex is OperationCanceledException)
                                     {
-                                        Logger.LogInformation("{ClientName} - Client processing thread canceled.", clientName);
+                                        Logger.LogInformation("{ClientName} - Client processing thread canceled", clientName);
 
                                         // Trigger client disconnected event
                                         OnClientDisconnected(socket, ex as OperationCanceledException);
@@ -400,7 +400,7 @@
                                     // Check if disconnected abruptly
                                     else if (ex is SocketException sEx && sEx.NativeErrorCode == 10054)
                                     {
-                                        Logger.LogWarning("{ClientName} - Client disconnected abruptly.", clientName);
+                                        Logger.LogWarning("{ClientName} - Client disconnected abruptly", clientName);
 
                                         // Trigger client disconnected event
                                         OnClientDisconnected(socket, sEx);
@@ -443,23 +443,9 @@
                             };
 
                             // Add meta to list of client threads
-                            if (Monitor.TryEnter(_lock))
+                            lock (_lock)
                             {
-                                try
-                                {
-                                    _clientThreads.Add(ctMeta);
-                                }
-                                finally
-                                {
-                                    Monitor.Exit(_lock);
-                                }
-                            }
-                            else
-                            {
-                                lock (_lock)
-                                {
-                                    _clientThreads.Add(ctMeta);
-                                }
+                                _clientThreads.Add(ctMeta);
                             }
 
                             // Start thread
@@ -471,11 +457,11 @@
                     }
                     catch (OperationCanceledException)
                     {
-                        Logger.LogInformation("Listener processing canceled.");
+                        Logger.LogInformation("Listener processing canceled");
                     }
                     catch (Exception loopEx)
                     {
-                        Logger.LogError(loopEx, "Error in listener processing.");
+                        Logger.LogError(loopEx, "Error in listener processing");
                     }
 
                     // Reset client counter
@@ -493,10 +479,7 @@
                     CancellationToken = _cts.Token;
                 }
 
-                // Clean up client threads
-                CancelAndRemoveClientThreads();
-
-                Logger.LogTrace("Exit listener.");
+                Logger.LogTrace("Leaving listener");
             }
         }
 
@@ -575,7 +558,7 @@
                         // Check cancellation
                         if (cancellationToken.IsCancellationRequested)
                         {
-                            Logger.LogInformation("{ClientName} - Cancellation requested for client.", clientName);
+                            Logger.LogInformation("{ClientName} - Cancellation requested for client", clientName);
                             break;
                         }
 
@@ -600,7 +583,7 @@
                         // Check cancellation
                         if (cancellationToken.IsCancellationRequested)
                         {
-                            Logger.LogInformation("{ClientName} - Cancellation requested for client.", clientName);
+                            Logger.LogInformation("{ClientName} - Cancellation requested for client", clientName);
                             break;
                         }
 
@@ -618,12 +601,12 @@
                     }
                     catch (OperationCanceledException)
                     {
-                        Logger.LogInformation("{ClientName} - Client processing canceled.", clientName);
+                        Logger.LogInformation("{ClientName} - Client processing canceled", clientName);
                         break;
                     }
                     catch (Exception ex)
                     {
-                        Logger.LogError(ex, "{ClientName} - Error in processing client connection.", clientName);
+                        Logger.LogError(ex, "{ClientName} - Error in processing client connection", clientName);
 
                         // Trigger client error event
                         ClientError?.Invoke(this, new ClientErrorEventArgs
@@ -638,14 +621,14 @@
                 // Check cancellation
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    Logger.LogInformation("{ClientName} - Cancellation requested for client.", clientName);
+                    Logger.LogInformation("{ClientName} - Cancellation requested for client", clientName);
                     break;
                 }
 
                 // Disconnect if needed
                 if (!clientSocket.IsConnected())
                 {
-                    Logger.LogInformation("{ClientName} - Client disconnected.", clientName);
+                    Logger.LogInformation("{ClientName} - Client disconnected", clientName);
                     break;
                 }
 
@@ -655,21 +638,21 @@
                 // Check cancellation
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    Logger.LogInformation("{ClientName} - Cancellation requested for client.", clientName);
+                    Logger.LogInformation("{ClientName} - Cancellation requested for client", clientName);
                     break;
                 }
 
                 // Disconnect if needed
                 if (!clientSocket.IsConnected())
                 {
-                    Logger.LogInformation("{ClientName} - Client disconnected.", clientName);
+                    Logger.LogInformation("{ClientName} - Client disconnected", clientName);
                     break;
                 }
 
                 // Write waiting message
                 if ((loopCntr % 10) == 0 || loopCntr == 0)
                 {
-                    Logger.LogTrace("{ClientName} - Waiting on data; currently on [{LoopCounter}] iteration.", clientName, loopCntr);
+                    Logger.LogTrace("{ClientName} - Waiting on data; currently on [{LoopCounter}] iteration", clientName, loopCntr);
 
                     ClientWaiting?.Invoke(this, new ClientWaitingEventArgs
                     {
@@ -720,7 +703,7 @@
             // Start monitor thread if needed
             if (_monitorThread.ThreadState == ThreadState.Unstarted)
             {
-                Logger.LogTrace("Starting clients thread monitor.");
+                Logger.LogTrace("Starting clients thread monitor");
                 _monitorThread.Start();
             }
         }
@@ -740,11 +723,11 @@
                 }
                 catch (OperationCanceledException)
                 {
-                    Logger.LogTrace("Monitor thread canceled.");
+                    Logger.LogTrace("Monitor thread canceled");
                 }
                 catch (ThreadInterruptedException)
                 {
-                    Logger.LogTrace("Monitor thread interrupted during wait.");
+                    Logger.LogTrace("Monitor thread interrupted during wait");
                 }
             });
 
@@ -760,7 +743,7 @@
         /// </summary>
         private async Task MonitorClientThreads()
         {
-            Logger.LogTrace("Monitoring clients.");
+            Logger.LogTrace("Monitoring clients");
 
             try
             {
@@ -788,7 +771,7 @@
                     }
                     else
                     {
-                        Logger.LogWarning("Could not get lock on object to see if we need to continue to monitor client threads.");
+                        Logger.LogWarning("Could not get lock on object to see if we need to continue to monitor client threads");
                         continueToRun = true;
                     }
 
@@ -809,11 +792,11 @@
             }
             catch (TaskCanceledException)
             {
-                Logger.LogTrace("Monitor delay canceled.");
+                Logger.LogTrace("Monitor delay canceled");
             }
             finally
             {
-                Logger.LogTrace("Leaving client monitor.");
+                Logger.LogTrace("Leaving client monitor");
             }
         }
 
@@ -832,7 +815,7 @@
                         // New-up threads to remove container
                         var removeThese = new List<ClientThreadMeta>();
 
-                        Logger.LogTrace("Checking for stopped client threads.");
+                        Logger.LogTrace("Checking for stopped client threads");
 
                         // Get threads to remove
                         for (var i = 0; i < _clientThreads.Count; i++)
@@ -847,7 +830,7 @@
                         // Remove threads from container
                         if (removeThese.Count > 0)
                         {
-                            Logger.LogTrace("Removing client threads.");
+                            Logger.LogTrace("Removing client threads");
 
                             // Remove threads
                             foreach (var meta in removeThese)
@@ -860,7 +843,7 @@
                         // Call garbage collector
                         if (removeThese.Count > 0)
                         {
-                            Logger.LogTrace("Force GC.");
+                            Logger.LogTrace("Force GC");
                             GC.Collect();
                         }
                     }
@@ -871,7 +854,7 @@
                 }
                 else
                 {
-                    Logger.LogWarning("Could not get lock on object to clean up client threads.");
+                    Logger.LogWarning("Could not get lock on object to clean up client threads");
                 }
             }
         }
@@ -881,14 +864,15 @@
         /// </summary>
         private void CancelAndRemoveClientThreads()
         {
-            if (_clientThreads.Count > 0)
+            // Lock it up to work on removal
+            lock (_lock)
             {
-                // Lock it up to work on removal
-                if (Monitor.TryEnter(_lock))
+                // Test if there are any clients to cancel and remove
+                if (_clientThreads.Count > 0)
                 {
                     try
                     {
-                        Logger.LogTrace("Canceling client threads.");
+                        Logger.LogTrace("Canceling client threads");
 
                         // Get threads to remove
                         for (var i = 0; i < _clientThreads.Count; i++)
@@ -902,18 +886,12 @@
                             // Remove from list
                             _clientThreads.Remove(meta);
                         }
-
-                        Logger.LogTrace("Force GC.");
-                        GC.Collect();
                     }
                     finally
                     {
-                        Monitor.Exit(_lock);
+                        Logger.LogTrace("Force GC");
+                        GC.Collect();
                     }
-                }
-                else
-                {
-                    Logger.LogWarning("Could not get lock on object to cancel client threads.");
                 }
             }
         }
