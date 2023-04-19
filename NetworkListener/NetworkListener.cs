@@ -565,7 +565,7 @@
                         // Get encoded message
                         var message = NetworkCommunicationProcessor.Encode(buffer);
 
-                        Logger.LogTrace("{ClientName} - Message from {RemoteEndPoint} received. Message: {Message}", clientName, clientSocket.RemoteEndPoint, message);
+                        Logger.LogTrace("{ClientName} - Message from {RemoteEndPoint} received", clientName, clientSocket.RemoteEndPoint);
 
                         // Process message
                         var ts = DateTime.UtcNow;
