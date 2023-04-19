@@ -830,7 +830,7 @@
                         // Remove threads from container
                         if (removeThese.Count > 0)
                         {
-                            Logger.LogTrace("Removing client threads");
+                            Logger.LogTrace("Removing stopped client threads");
 
                             // Remove threads
                             foreach (var meta in removeThese)
@@ -843,7 +843,6 @@
                         // Call garbage collector
                         if (removeThese.Count > 0)
                         {
-                            Logger.LogTrace("Force GC");
                             GC.Collect();
                         }
                     }
@@ -880,8 +879,15 @@
                             // Get meta
                             var meta = _clientThreads.ElementAt(i);
 
-                            // Cancel thread first
-                            meta.CancellationTokenSource.Cancel();
+                            // Attempt to stop 
+                            try
+                            {
+                                meta.CancellationTokenSource.Cancel();
+                            }
+                            catch
+                            {
+                                Logger.LogWarning("Could not cancel client thread, {ClientName}", meta.Name);
+                            }
 
                             // Remove from list
                             _clientThreads.Remove(meta);
@@ -889,7 +895,6 @@
                     }
                     finally
                     {
-                        Logger.LogTrace("Force GC");
                         GC.Collect();
                     }
                 }
