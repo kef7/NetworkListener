@@ -4,6 +4,7 @@
     using Microsoft.Extensions.Logging;
     using System;
     using System.Net;
+    using System.Net.Security;
     using System.Net.Sockets;
     using System.Security.Cryptography.X509Certificates;
     using System.Threading;
@@ -149,7 +150,7 @@
         /// The certificate to use for SSL/TLS communications
         /// </summary>
         public X509Certificate? Certificate { get; internal set; } = null;
-        
+
         /// <summary>
         /// The security protocol type to use for secured communications
         /// </summary>
@@ -297,11 +298,6 @@
 
                     // Start listening
                     ListenerSocket.Listen(Port);
-
-
-                    // TODO: How do we use Certificate and SecurityProtocolType to make SSL/TLS communication happen?
-                    // Set: ServicePointManager.SecurityProtocol = securityProtocolType;
-
 
                     Logger.LogInformation("Listening on end point {EndPoint}", ipEndPoint);
 
@@ -540,6 +536,9 @@
                 throw new ArgumentNullException(nameof(clientSocket));
             }
 
+            // Get client stream
+            using var clientStream = GetClientStream(clientSocket, Certificate);
+
             // Get or set client name
             var clientName = Thread.CurrentThread.Name ?? Guid.NewGuid().ToString();
 
@@ -569,7 +568,7 @@
                         var buffer = new byte[maxBufferSize];
 
                         // Receive message from client
-                        var received = await clientSocket.ReceiveAsync(buffer, SocketFlags.None, cancellationToken);
+                        var received = await clientStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
 
                         // Check cancellation
                         if (cancellationToken.IsCancellationRequested)
@@ -612,7 +611,7 @@
                             var ackMessageBytes = NetworkCommunicationProcessor.Decode(ackMessage);
 
                             // Send acknowledgment message to client
-                            _ = await clientSocket.SendAsync(ackMessageBytes, SocketFlags.None, cancellationToken);
+                            await clientStream.WriteAsync(ackMessageBytes, 0, ackMessageBytes.Length, cancellationToken);
                         }
                     }
                     catch (OperationCanceledException)
@@ -686,6 +685,37 @@
             } // End - while true
 
             Logger.LogTrace("{ClientName} - Leaving client connection processing", clientName);
+        }
+
+        /// <summary>
+        /// Get client stream
+        /// </summary>
+        /// <param name="clientSocket">The client socket to get stream of</param>
+        /// <param name="certificate">Certificate if using secured connection</param>
+        /// <returns>Client network stream or SSL stream if valid</returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="IOException"></exception>
+        /// <exception cref="ArgumentException"></exception>
+        private Stream GetClientStream(Socket clientSocket, X509Certificate? certificate = null)
+        {
+            if (clientSocket is null)
+            {
+                throw new ArgumentNullException(nameof(clientSocket));
+            }
+
+            // Create network stream
+            var networkStream = new NetworkStream(clientSocket);
+
+            if (certificate is null)
+            {
+                return networkStream;
+            }
+
+            // Create SSL steam using network stream and authenticate using certificate
+            var sslStream = new SslStream(networkStream, true);
+            sslStream.AuthenticateAsServer(certificate);
+
+            return sslStream;
         }
 
         /// <summary>
