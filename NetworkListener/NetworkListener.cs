@@ -418,6 +418,10 @@
                                         OnClientDisconnected(socket, sEx);
                                         triggeredOnClientDisconnected = true;
                                     }
+                                    else
+                                    {
+                                        Logger.LogError(ex, "{ClientName} - Error in client processing", clientName);
+                                    }
                                 }
                                 finally
                                 {
