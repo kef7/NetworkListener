@@ -6,6 +6,7 @@
     using System.Net;
     using System.Net.Security;
     using System.Net.Sockets;
+    using System.Security.Authentication;
     using System.Security.Cryptography.X509Certificates;
     using System.Threading;
 
@@ -152,9 +153,9 @@
         public X509Certificate? Certificate { get; internal set; } = null;
 
         /// <summary>
-        /// The security protocol type to use for secured communications
+        /// The secure protocol types to use for secured communications
         /// </summary>
-        public SecurityProtocolType? SecurityProtocolType { get; internal set; } = null;
+        public SslProtocols? SslProtocols { get; internal set; } = null;
 
         /// <summary>
         /// The network communication processor object to process each network
@@ -717,7 +718,16 @@
 
             // Create SSL steam using network stream and authenticate using certificate
             var sslStream = new SslStream(networkStream, true);
-            sslStream.AuthenticateAsServer(certificate);
+
+            // Authenticate client as a server
+            if (SslProtocols.HasValue)
+            {
+                sslStream.AuthenticateAsServer(certificate, false, SslProtocols.Value, false);
+            }
+            else
+            {
+                sslStream.AuthenticateAsServer(certificate);
+            }
 
             return sslStream;
         }

@@ -10,7 +10,7 @@
         INetworkListenerBuilderCommon WithIPAddress(IPAddress ipAddress);
         INetworkListenerBuilderCommon WithSocketType(SocketType socketType);
         INetworkListenerBuilderCommon WithProtocol(ProtocolType protocolType);
-        INetworkListenerBuilderCommon WithCert(X509Certificate certificate, SecurityProtocolType? securityProtocolType);
+        INetworkListenerBuilderCommon WithCert(X509Certificate certificate, SslProtocols? sslProtocols);
         INetworkListenerBuilderCommon WithMaxClientConnections(int maxClientConnections);
         INetworkListenerBuilderCommon WithHandleParallelConnections(bool handleParallelConnections);
         NetworkListener Build();

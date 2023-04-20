@@ -5,6 +5,7 @@
     using System;
     using System.Net;
     using System.Net.Sockets;
+    using System.Security.Authentication;
     using System.Security.Cryptography.X509Certificates;
 
     /// <summary>
@@ -122,9 +123,9 @@
             /// With certificate and security protocol to use for secure communications
             /// </summary>
             /// <param name="certificate">The certificate to use for secure communications</param>
-            /// <param name="securityProtocolType">The security protocol to use for secure communications; defaults is null- letting environment decide</param>
+            /// <param name="sslProtocols">The secure protocols to use for secure communications; defaults is null- letting environment decide</param>
             /// <returns>Ref to builder</returns>
-            public INetworkListenerBuilderCommon WithCert(X509Certificate certificate, SecurityProtocolType? securityProtocolType = null)
+            public INetworkListenerBuilderCommon WithCert(X509Certificate certificate, SslProtocols? sslProtocols = null)
             {
                 if (certificate is null)
                 {
@@ -132,7 +133,7 @@
                 }
 
                 _listener.Certificate = certificate;
-                _listener.SecurityProtocolType = securityProtocolType;
+                _listener.SslProtocols = sslProtocols;
 
                 return this;
             }
