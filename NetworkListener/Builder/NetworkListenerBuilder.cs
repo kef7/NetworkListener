@@ -122,9 +122,9 @@
             /// With certificate and security protocol to use for secure communications
             /// </summary>
             /// <param name="certificate">The certificate to use for secure communications</param>
-            /// <param name="securityProtocolType">The security protocol to use for secure communications; defaults is <see cref="SecurityProtocolType.Tls13"/></param>
+            /// <param name="securityProtocolType">The security protocol to use for secure communications; defaults is null- letting environment decide</param>
             /// <returns>Ref to builder</returns>
-            public INetworkListenerBuilderCommon WithCert(X509Certificate certificate, SecurityProtocolType securityProtocolType = SecurityProtocolType.Tls13)
+            public INetworkListenerBuilderCommon WithCert(X509Certificate certificate, SecurityProtocolType? securityProtocolType = null)
             {
                 if (certificate is null)
                 {
