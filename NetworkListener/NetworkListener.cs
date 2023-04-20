@@ -5,6 +5,7 @@
     using System;
     using System.Net;
     using System.Net.Sockets;
+    using System.Security.Cryptography.X509Certificates;
     using System.Threading;
 
     /// <summary>
@@ -143,6 +144,16 @@
         /// The protocol type used on the listener
         /// </summary>
         public ProtocolType ProtocolType { get; internal set; } = ProtocolType.Tcp;
+
+        /// <summary>
+        /// The certificate to use for SSL/TLS communications
+        /// </summary>
+        public X509Certificate? Certificate { get; internal set; } = null;
+        
+        /// <summary>
+        /// The security protocol type to use for secured communications
+        /// </summary>
+        public SecurityProtocolType? SecurityProtocolType { get; internal set; } = null;
 
         /// <summary>
         /// The network communication processor object to process each network
@@ -286,6 +297,11 @@
 
                     // Start listening
                     ListenerSocket.Listen(Port);
+
+
+                    // TODO: How do we use Certificate and SecurityProtocolType to make SSL/TLS communication happen?
+                    // Set: ServicePointManager.SecurityProtocol = securityProtocolType;
+
 
                     Logger.LogInformation("Listening on end point {EndPoint}", ipEndPoint);
 

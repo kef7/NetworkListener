@@ -5,6 +5,7 @@
     using System;
     using System.Net;
     using System.Net.Sockets;
+    using System.Security.Cryptography.X509Certificates;
 
     /// <summary>
     /// A faceted builder class to build <see cref="NetworkListener"/> objects
@@ -113,6 +114,25 @@
             public INetworkListenerBuilderCommon WithProtocol(ProtocolType protocolType)
             {
                 _listener.ProtocolType = protocolType;
+
+                return this;
+            }
+
+            /// <summary>
+            /// With certificate and security protocol to use for secure communications
+            /// </summary>
+            /// <param name="certificate">The certificate to use for secure communications</param>
+            /// <param name="securityProtocolType">The security protocol to use for secure communications; defaults is <see cref="SecurityProtocolType.Tls13"/></param>
+            /// <returns>Ref to builder</returns>
+            public INetworkListenerBuilderCommon WithCert(X509Certificate certificate, SecurityProtocolType securityProtocolType = SecurityProtocolType.Tls13)
+            {
+                if (certificate is null)
+                {
+                    throw new ArgumentNullException(nameof(certificate));
+                }
+
+                _listener.Certificate = certificate;
+                _listener.SecurityProtocolType = securityProtocolType;
 
                 return this;
             }
