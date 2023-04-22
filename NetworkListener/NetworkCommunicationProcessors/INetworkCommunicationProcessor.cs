@@ -2,6 +2,9 @@
 {
     using System.Net;
 
+    // TODO: Should this allow for the access to the reading of the stream so we can get large sets of data? Or access to the stream for read & write.
+    // In this way we will allow each one to use the stream for reading until a character(s) is found like, "<EOF>".
+
     /// <summary>
     /// Interface for a network communication processing class
     /// </summary>
