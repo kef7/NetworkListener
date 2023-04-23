@@ -8,7 +8,7 @@
     public class ClientEventArgs
     {
         /// <summary>
-        /// Time-stamp of the messaged received event
+        /// Time-stamp of the received event
         /// </summary>
         public DateTime Timestamp { get; init; } = DateTime.UtcNow;
 

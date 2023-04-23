@@ -1,12 +1,8 @@
 ﻿namespace NetworkListener.NetworkCommunicationProcessors
 {
-    using System.Net;
-
-    // TODO: Should this allow for the access to the reading of the stream so we can get large sets of data? Or access to the stream for read & write.
-    // In this way we will allow each one to use the stream for reading until a character(s) is found like, "<EOF>".
-
     /// <summary>
-    /// Interface for a network communication processing class
+    /// Interface for the network communication processor used by <see cref="NetworkListener"/> to 
+    /// processes bytes received from clients and ACK bytes sent to clients connected to the listener
     /// </summary>
     public interface INetworkCommunicationProcessor
     {
@@ -16,26 +12,33 @@
         int MaxBufferSize { get; }
 
         /// <summary>
-        /// Used to encode the bytes received from the network into a string of characters
+        /// Process received bytes from the network socket
         /// </summary>
-        /// <param name="data">Bytes to be encoded into a string</param>
-        /// <returns>String message from encoded byte array @ <paramref name="data"/></returns>
-        string Encode(byte[] data);
+        /// <param name="bytes">Current bytes received from network from the current read</param>
+        /// <param name="received">Total number of bytes received from the current read</param>
+        /// <param name="iteration">The iteration of processing on the current read</param>
+        /// <returns>True if processing should continue; false otherwise</returns>
+        bool ReceivedBytes(byte[] bytes, int received, int iteration);
 
         /// <summary>
-        /// Process the message from the network socket. Happens after <see cref="Decode(byte[])"/>.
+        /// Get the received data as object from all previous sets of received bytes
+        /// processed by <see cref="ReceivedBytes(byte[], int, int)"/>
         /// </summary>
-        /// <param name="message">The decoded network message</param>
-        /// <param name="timeStamp">The time stamp of this communication message</param>
-        /// <param name="remoteEndpoint">The remote endpoint that we are communicating with</param>
-        /// <returns>An acknowledgment message to send back through network socket. Return null to not send anything back.</returns>
-        string ProcessCommunication(string message, DateTime timeStamp, EndPoint? remoteEndpoint);
+        /// <returns>All bytes received decoded into an object</returns>
+        object? GetReceived();
 
         /// <summary>
-        /// Used to decode an acknowledgment message to be sent to the network socket from <see cref="ProcessCommunication(string)"/>. Happens after <see cref="ProcessCommunication(string)"/>.
+        /// Process the data received from the network socket
         /// </summary>
-        /// <param name="message">The message to be decoded into a byte array</param>
-        /// <returns>A byte array that is the message to be sent through the network socket; null to not send anything</returns>
-        byte[] Decode(string message);
+        /// <param name="data">The data received from the network</param>
+        void ProcessReceived(object? data);
+
+        /// <summary>
+        /// Get an acknowledgment in bytes based on the data received from the network
+        /// which was processed by <see cref="ReceivedBytes(byte[], int, int)"/>.
+        /// </summary>
+        /// <param name="data">Data received from network</param>
+        /// <returns>Acknowledgment data in bytes, or null/empty-array to send nothing back to client</returns>
+        byte[] GetAckBytes(object? data);
     }
 }

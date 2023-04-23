@@ -57,9 +57,9 @@
         public event EventHandler<ClientDisconnectedEventArgs>? ClientDisconnected = null;
 
         /// <summary>
-        /// Client message received event signature
+        /// Client data received event signature
         /// </summary>
-        public event EventHandler<ClientMessageReceievedEventArgs>? ClientMessageReceived = null;
+        public event EventHandler<ClientDataReceivedEventArgs>? ClientDataReceived = null;
 
         /// <summary>
         /// Client waiting for data event signature
@@ -200,12 +200,12 @@
         public CancellationToken CancellationToken { get; protected set; }
 
         /// <summary>
-        /// CTOR
+        /// Network listener constructor
         /// </summary>
         /// <param name="logger">Required logger for trace logging</param>
         /// <param name="port">Port to listen on</param>
         /// <param name="maxClientConnections">Max number of client connection</param>
-        /// <param name="networkCommunicationProcessor">The network communication processor to process client messages</param>
+        /// <param name="networkCommunicationProcessor">The network communication processor to process client data</param>
         internal NetworkListener(ILogger<NetworkListener> logger, int? port = null, int? maxClientConnections = null, INetworkCommunicationProcessor? networkCommunicationProcessor = null)
         {
             Logger = logger;
@@ -254,7 +254,7 @@
         }
 
         /// <summary>
-        /// Start listening, accepting connections, and receiving messages.
+        /// Start listening, accepting connections, and receiving data
         /// </summary>
         /// <remarks>
         /// This will lock the thread it is on
@@ -551,14 +551,14 @@
 
             // Declare vars and kick off loop to process client
             uint loopCntr = 0;
-            int msgCntr = 0;
+            int dataCntr = 0;
             while (true)
             {
                 // Check if data available from client
                 if (clientSocket.Available > 0)
                 {
-                    // Increment message counter
-                    msgCntr += 1;
+                    // Increment data counter
+                    dataCntr += 1;
 
                     try
                     {
@@ -572,8 +572,39 @@
                         // Declare buffer
                         var buffer = new byte[maxBufferSize];
 
-                        // Receive message from client
-                        var received = await clientStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
+                        // Read all data from client
+                        var received = -1;
+                        var iteration = 1;
+                        do
+                        {
+                            Logger.LogInformation("{ClientName} - Receiving data from {RemoteEndPoint}; iteration [{Iteration}]", clientName, clientSocket.RemoteEndPoint, iteration);
+
+                            // Receive data from client
+                            received = await clientStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
+
+                            Logger.LogDebug("{ClientName} - Received [{BytesReceived}] bytes from {RemoteEndPoint}; iteration [{Iteration}]", clientName, received, clientSocket.RemoteEndPoint, iteration);
+
+                            // Check cancellation
+                            if (cancellationToken.IsCancellationRequested)
+                            {
+                                Logger.LogInformation("{ClientName} - Cancellation requested for client", clientName);
+                                break;
+                            }
+
+                            // Pass data to network communication processor
+                            if (!NetworkCommunicationProcessor.ReceivedBytes(buffer, received, iteration++))
+                            {
+                                break;
+                            }
+
+                            // Check cancellation
+                            if (cancellationToken.IsCancellationRequested)
+                            {
+                                Logger.LogInformation("{ClientName} - Cancellation requested for client", clientName);
+                                break;
+                            }
+                        }
+                        while (received != 0);
 
                         // Check cancellation
                         if (cancellationToken.IsCancellationRequested)
@@ -582,20 +613,16 @@
                             break;
                         }
 
-                        // Get encoded message
-                        var message = NetworkCommunicationProcessor.Encode(buffer);
+                        // Process received data
+                        var data = NetworkCommunicationProcessor.GetReceived();
+                        NetworkCommunicationProcessor.ProcessReceived(data);
 
-                        Logger.LogTrace("{ClientName} - Message from {RemoteEndPoint} received", clientName, clientSocket.RemoteEndPoint);
-
-                        // Process message
+                        // Trigger data received event if needed
                         var ts = DateTime.UtcNow;
                         var remoteEndPoint = clientSocket.RemoteEndPoint;
-                        var ackMessage = NetworkCommunicationProcessor.ProcessCommunication(message, ts, remoteEndPoint);
-
-                        // Trigger message received event if needed
-                        ClientMessageReceived?.Invoke(this, new ClientMessageReceievedEventArgs
+                        ClientDataReceived?.Invoke(this, new ClientDataReceivedEventArgs
                         {
-                            Message = message,
+                            Data = data,
                             Timestamp = ts,
                             RemoteEndPoint = remoteEndPoint
                         });
@@ -607,16 +634,14 @@
                             break;
                         }
 
-                        // Trigger message acknowledgment
-                        if (ackMessage != null)
+                        // Send acknowledgment to client if needed
+                        var ackBytes = NetworkCommunicationProcessor.GetAckBytes(data);
+                        if (ackBytes?.Length > 0)
                         {
-                            Logger.LogTrace("{ClientName} - Sending ACK message to {RemoteEndPoint}", clientName, remoteEndPoint);
+                            Logger.LogTrace("{ClientName} - Sending ACK to {RemoteEndPoint}", clientName, remoteEndPoint);
 
-                            // Get decoded message
-                            var ackMessageBytes = NetworkCommunicationProcessor.Decode(ackMessage);
-
-                            // Send acknowledgment message to client
-                            await clientStream.WriteAsync(ackMessageBytes, 0, ackMessageBytes.Length, cancellationToken);
+                            // Send acknowledgment to client
+                            await clientStream.WriteAsync(ackBytes, 0, ackBytes.Length, cancellationToken);
                         }
                     }
                     catch (OperationCanceledException)
