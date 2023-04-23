@@ -37,7 +37,7 @@ namespace NetworkListener.NetworkCommunicationProcessors
             EndOfProcessingMarker = MllpEndChar.ToString();
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc cref="BaseMessageNetworkCommunicationProcessor.GetReceived"/>
         public override object? GetReceived()
         {
             // Parse message body out of MLLP message
@@ -47,7 +47,7 @@ namespace NetworkListener.NetworkCommunicationProcessors
             return message;
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc cref="BaseMessageNetworkCommunicationProcessor.BuildAckMessage(object?)"/>
         protected new abstract string BuildAckMessage(object? data);
 
         /// <summary>

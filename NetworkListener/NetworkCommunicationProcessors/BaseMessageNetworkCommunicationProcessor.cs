@@ -8,10 +8,12 @@ namespace NetworkListener.NetworkCommunicationProcessors
     /// </summary>
     public abstract class BaseMessageNetworkCommunicationProcessor : INetworkCommunicationProcessor
     {
-        /// <inheritdoc/>
+        /// <summary>
+        /// Logger
+        /// </summary>
         protected ILogger Logger { get; }
 
-        /// <inheritdoc/>
+        /// <inheritdoc cref="INetworkCommunicationProcessor.MaxBufferSize"/>
         public int MaxBufferSize { get; init; } = 4096 * 4096;
 
         /// <summary>
@@ -44,7 +46,7 @@ namespace NetworkListener.NetworkCommunicationProcessors
             Logger = logger;
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc cref="INetworkCommunicationProcessor.ReceivedBytes(byte[], int, int)"/>
         public virtual bool ReceivedBytes(byte[] bytes, int received, int iteration)
         {
             Logger.LogTrace("Received {Received} bytes on iteration [{Iteration}]", received, iteration);
@@ -79,16 +81,16 @@ namespace NetworkListener.NetworkCommunicationProcessors
             return true;
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc cref="INetworkCommunicationProcessor.GetReceived"/>
         public virtual object? GetReceived()
         {
             return MessageBuilder.ToString();
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc cref="INetworkCommunicationProcessor.ProcessReceived(object?)"/>
         public abstract void ProcessReceived(object? data);
 
-        /// <inheritdoc/>
+        /// <inheritdoc cref="INetworkCommunicationProcessor.GetAckBytes(object?)"/>
         public virtual byte[] GetAckBytes(object? data)
         {
             // Build ACK message
