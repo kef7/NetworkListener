@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Text;
 
-namespace NetworkListener.NetworkCommunicationProcessors
+namespace NetworkListener.NetworkCommunicationProcessors // TODO: rename to NetClientDataProcessors
 {
     /// <summary>
     /// Base simple network communication processor; for communications that contain end of message processing marker and ack
