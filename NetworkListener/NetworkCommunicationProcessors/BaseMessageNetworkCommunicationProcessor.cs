@@ -127,10 +127,11 @@ namespace NetworkListener.NetworkCommunicationProcessors
         }
 
         /// <summary>
-        /// Reset properties used to process the buffered message from the network connection
+        /// Reset items used to process the bytes received from the network connection
         /// </summary>
         public virtual void ResetBufferProcessing()
         {
+            MessageBuilder.Clear();
             Decoder.Reset();
             Encoder.Reset();
         }
