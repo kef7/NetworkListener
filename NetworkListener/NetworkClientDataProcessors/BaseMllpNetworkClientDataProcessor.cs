@@ -1,12 +1,12 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Text;
 
-namespace NetworkListener.NetworkCommunicationProcessors
+namespace NetworkListener.NetworkClientDataProcessors
 {
     /// <summary>
-    /// Base MLLP network communication processor
+    /// Base MLLP network client data processor
     /// </summary>
-    public abstract class BaseMllpNetworkCommunicationProcessor : BaseMessageNetworkCommunicationProcessor
+    public abstract class BaseMllpNetworkClientDataProcessor : BaseMessageNetworkClientDataProcessor
     {
         /// <summary>
         /// MLLP start block character; signals starting of MLLP wrapped message;
@@ -27,17 +27,17 @@ namespace NetworkListener.NetworkCommunicationProcessors
         public virtual char MllpEndChar { get; init; } = (char)28;
 
         /// <summary>
-        /// CTOR for base MLLP network communication processor
+        /// CTOR for base MLLP network client data processor
         /// </summary>
         /// <param name="logger">Generic logger</param>
-        public BaseMllpNetworkCommunicationProcessor(ILogger<BaseMllpNetworkCommunicationProcessor> logger)
+        public BaseMllpNetworkClientDataProcessor(ILogger<BaseMllpNetworkClientDataProcessor> logger)
             : base(logger)
         {
             // Set to MLLP end character so processing will end if needed
             EndOfProcessingMarker = MllpEndChar.ToString();
         }
 
-        /// <inheritdoc cref="BaseMessageNetworkCommunicationProcessor.GetReceived"/>
+        /// <inheritdoc cref="BaseMessageNetworkClientDataProcessor.GetReceived"/>
         public override object? GetReceived()
         {
             // Parse message body out of MLLP message
@@ -47,7 +47,7 @@ namespace NetworkListener.NetworkCommunicationProcessors
             return message;
         }
 
-        /// <inheritdoc cref="BaseMessageNetworkCommunicationProcessor.BuildAckMessage(object?)"/>
+        /// <inheritdoc cref="BaseMessageNetworkClientDataProcessor.BuildAckMessage(object?)"/>
         protected new abstract string BuildAckMessage(object? data);
 
         /// <summary>
@@ -104,7 +104,7 @@ namespace NetworkListener.NetworkCommunicationProcessors
         /// <param name="messageLines">Lines of the message to be wrapped</param>
         /// <returns>Wrapped MLLP message</returns>
         /// <remarks>
-        /// Can be used in <see cref="BaseMessageNetworkCommunicationProcessor.GetAckBytes"/> 
+        /// Can be used in <see cref="BaseMessageNetworkClientDataProcessor.GetAckBytes"/> 
         /// for building proper MLLP wrapped message for acknowledgment.
         /// </remarks>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="messageLines"/> is null</exception>

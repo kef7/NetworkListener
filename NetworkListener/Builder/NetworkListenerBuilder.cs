@@ -1,6 +1,6 @@
 ﻿namespace NetworkListener.Builder
 {
-    using global::NetworkListener.NetworkCommunicationProcessors;
+    using global::NetworkListener.NetworkClientDataProcessors;
     using Microsoft.Extensions.Logging;
     using System;
     using System.Net;
@@ -33,11 +33,7 @@
                 _listener = new NetworkListener(logger);
             }
 
-            /// <summary>
-            /// Specify the required port number
-            /// </summary>
-            /// <param name="port">The port number to use</param>
-            /// <returns>Ref to builder</returns>
+            /// <inheritdoc cref="INetworkListenerBuilderSpecifyPort.UsingPort(int)"/>
             /// <exception cref="ArgumentOutOfRangeException">If <paramref name="port"/> is outside standard port ranges</exception>
             public INetworkListenerBuilderSpecifyProcessor UsingPort(int port)
             {
@@ -58,36 +54,28 @@
                 return this;
             }
 
-            /// <summary>
-            /// Specify the required network communication processor object
-            /// </summary>
-            /// <param name="networkCommunicationProcessor">Network communication processor object for the network lister</param>
-            /// <returns>Ref to builder</returns>
-            /// <exception cref="ArgumentNullException">If <paramref name="networkCommunicationProcessor"/> is null</exception>
-            public INetworkListenerBuilderCommon UsingProcessor(INetworkCommunicationProcessor networkCommunicationProcessor)
+            /// <inheritdoc cref="INetworkListenerBuilderSpecifyProcessor.UsingProcessor(INetworkClientDataProcessor)"/>
+            /// <exception cref="ArgumentNullException">If <paramref name="networkClientDataProcessor"/> is null</exception>
+            public INetworkListenerBuilderCommon UsingProcessor(INetworkClientDataProcessor networkClientDataProcessor)
             {
                 // Validate object
-                if (networkCommunicationProcessor is null)
+                if (networkClientDataProcessor is null)
                 {
-                    throw new ArgumentNullException(nameof(networkCommunicationProcessor));
+                    throw new ArgumentNullException(nameof(networkClientDataProcessor));
                 }
 
                 // Validate max buffer size
-                if (networkCommunicationProcessor.MaxBufferSize < 1)
+                if (networkClientDataProcessor.MaxBufferSize < 1)
                 {
-                    throw new ArgumentOutOfRangeException(nameof(networkCommunicationProcessor.MaxBufferSize));
+                    throw new ArgumentOutOfRangeException(nameof(networkClientDataProcessor.MaxBufferSize));
                 }
 
-                _listener.NetworkCommunicationProcessor = networkCommunicationProcessor;
+                _listener.NetworkClientDataProcessor = networkClientDataProcessor;
 
                 return this;
             }
 
-            /// <summary>
-            /// With specified IP address
-            /// </summary>
-            /// <param name="ipAddress">The IP address to use</param>
-            /// <returns>Ref to builder</returns>
+            /// <inheritdoc cref="INetworkListenerBuilderCommon.WithIPAddress(IPAddress)"/>
             public INetworkListenerBuilderCommon WithIPAddress(IPAddress ipAddress)
             {
                 _listener.IPAddress = ipAddress;
@@ -95,11 +83,7 @@
                 return this;
             }
 
-            /// <summary>
-            /// With specified socket type
-            /// </summary>
-            /// <param name="socketType">The socket type to use</param>
-            /// <returns>Ref to builder</returns>
+            /// <inheritdoc cref="INetworkListenerBuilderCommon.WithSocketType(SocketType)"/>
             public INetworkListenerBuilderCommon WithSocketType(SocketType socketType)
             {
                 _listener.SocketType = socketType;
@@ -107,11 +91,7 @@
                 return this;
             }
 
-            /// <summary>
-            /// With specified protocol type
-            /// </summary>
-            /// <param name="protocolType">The protocol type to use</param>
-            /// <returns>Ref to builder</returns>
+            /// <inheritdoc cref="INetworkListenerBuilderCommon.WithProtocol(ProtocolType)"/>
             public INetworkListenerBuilderCommon WithProtocol(ProtocolType protocolType)
             {
                 _listener.ProtocolType = protocolType;
@@ -119,12 +99,7 @@
                 return this;
             }
 
-            /// <summary>
-            /// With certificate and security protocol to use for secure communications
-            /// </summary>
-            /// <param name="certificate">The certificate to use for secure communications</param>
-            /// <param name="sslProtocols">The secure protocols to use for secure communications; defaults is null- letting environment decide</param>
-            /// <returns>Ref to builder</returns>
+            /// <inheritdoc cref="INetworkListenerBuilderCommon.WithCert(X509Certificate, SslProtocols?)"/>
             public INetworkListenerBuilderCommon WithCert(X509Certificate certificate, SslProtocols? sslProtocols = null)
             {
                 if (certificate is null)
@@ -138,11 +113,7 @@
                 return this;
             }
 
-            /// <summary>
-            /// Max client connections
-            /// </summary>
-            /// <param name="maxClientConnections">Maximum number of connections to handle</param>
-            /// <returns>Ref to builder</returns>
+            /// <inheritdoc cref="INetworkListenerBuilderCommon.WithMaxClientConnections(int)"/>
             public INetworkListenerBuilderCommon WithMaxClientConnections(int maxClientConnections)
             {
                 // Adjust lower range
@@ -156,11 +127,7 @@
                 return this;
             }
 
-            /// <summary>
-            /// With handling parallel connections
-            /// </summary>
-            /// <param name="handleParallelConnections">Flag to indicate that network listener should handle parallel connections</param>
-            /// <returns>Ref to builder</returns>
+            /// <inheritdoc cref="INetworkListenerBuilderCommon.WithHandleParallelConnections(bool)"/>
             public INetworkListenerBuilderCommon WithHandleParallelConnections(bool handleParallelConnections)
             {
                 _listener.HandleParallelConnections = handleParallelConnections;
@@ -168,10 +135,7 @@
                 return this;
             }
 
-            /// <summary>
-            /// Build the <see cref="NetworkListener"/> object as informed
-            /// </summary>
-            /// <returns>Configured listener object</returns>
+            /// <inheritdoc cref="INetworkListenerBuilderCommon.Build"/>
             public NetworkListener Build()
             {
                 return _listener;

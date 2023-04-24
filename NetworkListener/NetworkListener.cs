@@ -1,6 +1,6 @@
 ﻿namespace NetworkListener
 {
-    using global::NetworkListener.NetworkCommunicationProcessors;
+    using global::NetworkListener.NetworkClientDataProcessors;
     using Microsoft.Extensions.Logging;
     using System;
     using System.Net;
@@ -158,9 +158,9 @@
         public SslProtocols? SslProtocols { get; internal set; } = null;
 
         /// <summary>
-        /// The network communication processor object to process each network
+        /// The network client data processor object to process each network
         /// </summary>
-        public INetworkCommunicationProcessor NetworkCommunicationProcessor { get; internal set; } = null!;
+        public INetworkClientDataProcessor NetworkClientDataProcessor { get; internal set; } = null!;
 
         /// <summary>
         /// Handle parallel connections
@@ -205,8 +205,8 @@
         /// <param name="logger">Required logger for trace logging</param>
         /// <param name="port">Port to listen on</param>
         /// <param name="maxClientConnections">Max number of client connection</param>
-        /// <param name="networkCommunicationProcessor">The network communication processor to process client data</param>
-        internal NetworkListener(ILogger<NetworkListener> logger, int? port = null, int? maxClientConnections = null, INetworkCommunicationProcessor? networkCommunicationProcessor = null)
+        /// <param name="networkClientDataProcessor">The network client data processor to process client data</param>
+        internal NetworkListener(ILogger<NetworkListener> logger, int? port = null, int? maxClientConnections = null, INetworkClientDataProcessor? networkClientDataProcessor = null)
         {
             Logger = logger;
 
@@ -242,14 +242,14 @@
                 MaxClientConnections = mcc;
             }
 
-            if (networkCommunicationProcessor != null)
+            if (networkClientDataProcessor != null)
             {
-                if (networkCommunicationProcessor.MaxBufferSize < 1)
+                if (networkClientDataProcessor.MaxBufferSize < 1)
                 {
-                    throw new ArgumentOutOfRangeException(nameof(networkCommunicationProcessor.MaxBufferSize));
+                    throw new ArgumentOutOfRangeException(nameof(networkClientDataProcessor.MaxBufferSize));
                 }
 
-                NetworkCommunicationProcessor = networkCommunicationProcessor;
+                NetworkClientDataProcessor = networkClientDataProcessor;
             }
         }
 
@@ -564,9 +564,9 @@
                     {
                         // Declare buffer size
                         var maxBufferSize = clientSocket.Available;
-                        if (maxBufferSize > NetworkCommunicationProcessor.MaxBufferSize)
+                        if (maxBufferSize > NetworkClientDataProcessor.MaxBufferSize)
                         {
-                            maxBufferSize = NetworkCommunicationProcessor.MaxBufferSize;
+                            maxBufferSize = NetworkClientDataProcessor.MaxBufferSize;
                         }
 
                         // Declare buffer
@@ -591,9 +591,11 @@
                                 break;
                             }
 
-                            // Pass data to network communication processor
-                            if (!NetworkCommunicationProcessor.ReceivedBytes(buffer, received, iteration++))
+                            // Pass data to network client data processor
+                            if (!NetworkClientDataProcessor.ReceivedBytes(buffer, received, iteration++))
                             {
+                                var ncpType = NetworkClientDataProcessor.GetType();
+                                Logger.LogInformation("{ClientName} - Processing informed listener to stop receiving; of type: {NcpType}", clientName, ncpType.Name);
                                 break;
                             }
 
@@ -614,8 +616,8 @@
                         }
 
                         // Process received data
-                        var data = NetworkCommunicationProcessor.GetReceived();
-                        NetworkCommunicationProcessor.ProcessReceived(data);
+                        var data = NetworkClientDataProcessor.GetReceived();
+                        NetworkClientDataProcessor.ProcessReceived(data);
 
                         // Trigger data received event if needed
                         var ts = DateTime.UtcNow;
@@ -635,7 +637,7 @@
                         }
 
                         // Send acknowledgment to client if needed
-                        var ackBytes = NetworkCommunicationProcessor.GetAckBytes(data);
+                        var ackBytes = NetworkClientDataProcessor.GetAckBytes(data);
                         if (ackBytes?.Length > 0)
                         {
                             Logger.LogTrace("{ClientName} - Sending ACK to {RemoteEndPoint}", clientName, remoteEndPoint);
@@ -723,7 +725,7 @@
         /// <param name="clientSocket">The client socket to get stream of</param>
         /// <param name="certificate">Certificate if using secured connection</param>
         /// <returns>Client network stream or SSL stream if valid</returns>
-        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="certificate"/> is null</exception>
         /// <exception cref="IOException"></exception>
         /// <exception cref="ArgumentException"></exception>
         private Stream GetClientStream(Socket clientSocket, X509Certificate? certificate = null)

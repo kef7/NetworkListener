@@ -1,23 +1,23 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Text;
 
-namespace NetworkListener.NetworkCommunicationProcessors // TODO: rename to NetClientDataProcessors
+namespace NetworkListener.NetworkClientDataProcessors
 {
     /// <summary>
-    /// Base simple network communication processor; for communications that contain end of message processing marker and ack
+    /// Base network client data processor for simple messages that contain an end of message processing marker and ack
     /// </summary>
-    public abstract class BaseMessageNetworkCommunicationProcessor : INetworkCommunicationProcessor
+    public abstract class BaseMessageNetworkClientDataProcessor : INetworkClientDataProcessor
     {
         /// <summary>
         /// Logger
         /// </summary>
         protected ILogger Logger { get; }
 
-        /// <inheritdoc cref="INetworkCommunicationProcessor.MaxBufferSize"/>
+        /// <inheritdoc cref="INetworkClientDataProcessor.MaxBufferSize"/>
         public int MaxBufferSize { get; init; } = 4096 * 4096;
 
         /// <summary>
-        /// Characters marker to flag the end of network buffer processing
+        /// Characters marker to flag the end of network bytes processing
         /// </summary>
         public virtual string EndOfProcessingMarker { get; init; } = "<EOF>";
 
@@ -37,16 +37,16 @@ namespace NetworkListener.NetworkCommunicationProcessors // TODO: rename to NetC
         protected virtual Encoder Encoder { get; init; } = Encoding.UTF8.GetEncoder();
 
         /// <summary>
-        /// CTOR for base message network communication processor; message should contain an 
+        /// CTOR for base message network client data processor; message should contain an 
         /// end of receive character to signal stopping of message processing
         /// </summary>
         /// <param name="logger">Generic logger</param>
-        public BaseMessageNetworkCommunicationProcessor(ILogger<BaseMessageNetworkCommunicationProcessor> logger)
+        public BaseMessageNetworkClientDataProcessor(ILogger<BaseMessageNetworkClientDataProcessor> logger)
         {
             Logger = logger;
         }
 
-        /// <inheritdoc cref="INetworkCommunicationProcessor.ReceivedBytes(byte[], int, int)"/>
+        /// <inheritdoc cref="INetworkClientDataProcessor.ReceivedBytes(byte[], int, int)"/>
         public virtual bool ReceivedBytes(byte[] bytes, int received, int iteration)
         {
             Logger.LogTrace("Received {Received} bytes on iteration [{Iteration}]", received, iteration);
@@ -54,13 +54,13 @@ namespace NetworkListener.NetworkCommunicationProcessors // TODO: rename to NetC
             // Reset processing if on first iteration
             if (iteration == 1)
             {
-                ResetBufferProcessing();
+                ResetProcessing();
             }
 
-            // Check buffer
+            // Check bytes array
             if (bytes.Length != 0)
             {
-                // Get decoded chars from buffer
+                // Get decoded chars from bytes
                 var chars = new char[Decoder.GetCharCount(bytes, 0, received)];
                 Decoder.GetChars(bytes, 0, received, chars, 0);
 
@@ -81,16 +81,16 @@ namespace NetworkListener.NetworkCommunicationProcessors // TODO: rename to NetC
             return true;
         }
 
-        /// <inheritdoc cref="INetworkCommunicationProcessor.GetReceived"/>
+        /// <inheritdoc cref="INetworkClientDataProcessor.GetReceived"/>
         public virtual object? GetReceived()
         {
             return MessageBuilder.ToString();
         }
 
-        /// <inheritdoc cref="INetworkCommunicationProcessor.ProcessReceived(object?)"/>
+        /// <inheritdoc cref="INetworkClientDataProcessor.ProcessReceived(object?)"/>
         public abstract void ProcessReceived(object? data);
 
-        /// <inheritdoc cref="INetworkCommunicationProcessor.GetAckBytes(object?)"/>
+        /// <inheritdoc cref="INetworkClientDataProcessor.GetAckBytes(object?)"/>
         public virtual byte[] GetAckBytes(object? data)
         {
             // Build ACK message
@@ -102,7 +102,7 @@ namespace NetworkListener.NetworkCommunicationProcessors // TODO: rename to NetC
             Encoder.GetBytes(chars, 0, chars.Length, bytes, 0, false);
 
             // Reset processing 
-            ResetBufferProcessing();
+            ResetProcessing();
 
             return bytes;
         }
@@ -129,7 +129,7 @@ namespace NetworkListener.NetworkCommunicationProcessors // TODO: rename to NetC
         /// <summary>
         /// Reset items used to process the bytes received from the network connection
         /// </summary>
-        public virtual void ResetBufferProcessing()
+        public virtual void ResetProcessing()
         {
             MessageBuilder.Clear();
             Decoder.Reset();

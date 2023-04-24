@@ -1,10 +1,10 @@
-﻿namespace NetworkListener.NetworkCommunicationProcessors
+﻿namespace NetworkListener.NetworkClientDataProcessors
 {
     /// <summary>
-    /// Interface for the network communication processor used by <see cref="NetworkListener"/> to 
-    /// processes bytes received from clients and ACK bytes sent to clients connected to the listener
+    /// Interface for client data processing used by <see cref="NetworkListener"/> to processes 
+    /// bytes received from clients and ACK bytes sent to clients connected to the listener
     /// </summary>
-    public interface INetworkCommunicationProcessor
+    public interface INetworkClientDataProcessor
     {
         /// <summary>
         /// Max buffer size for byte arrays and received data
