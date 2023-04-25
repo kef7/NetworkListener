@@ -11,6 +11,13 @@
     public interface INetworkListenerBuilderCommon
     {
         /// <summary>
+        /// With specified host name
+        /// </summary>
+        /// <param name="hostName">Host name of the server</param>
+        /// <returns>Ref to builder</returns>
+        INetworkListenerBuilderCommon WithHostName(string hostName);
+
+        /// <summary>
         /// With specified IP address
         /// </summary>
         /// <param name="ipAddress">The IP address to use</param>

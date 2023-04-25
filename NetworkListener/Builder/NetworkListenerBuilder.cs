@@ -2,6 +2,7 @@
 {
     using global::NetworkListener.NetworkClientDataProcessors;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Logging.Abstractions;
     using System;
     using System.Net;
     using System.Net.Sockets;
@@ -30,6 +31,11 @@
             /// <param name="logger">Logger for the <see cref="NetworkListener"/></param>
             public InternalBuilder(ILogger<NetworkListener> logger)
             {
+                if (logger is null)
+                {
+                    throw new ArgumentNullException(nameof(logger));
+                }
+
                 _listener = new NetworkListener(logger);
             }
 
@@ -75,9 +81,22 @@
                 return this;
             }
 
+            /// <inheritdoc cref="INetworkListenerBuilderCommon.WithHostName(string)"/>
+            public INetworkListenerBuilderCommon WithHostName(string hostName)
+            {
+                _listener.HostName = hostName;
+
+                return this;
+            }
+
             /// <inheritdoc cref="INetworkListenerBuilderCommon.WithIPAddress(IPAddress)"/>
             public INetworkListenerBuilderCommon WithIPAddress(IPAddress ipAddress)
             {
+                if (ipAddress is null)
+                {
+                    throw new ArgumentNullException(nameof(ipAddress));
+                }
+
                 _listener.IPAddress = ipAddress;
 
                 return this;
@@ -150,12 +169,22 @@
         }
 
         /// <summary>
-        /// Create new faceted builder
+        /// Create new faceted builder for building a <see cref="NetworkListener"/>
         /// </summary>
         /// <param name="logger">Logger for the <see cref="NetworkListener"/></param>
         /// <returns>Faceted builder for <see cref="NetworkListener"/></returns>
         public static INetworkListenerBuilderSpecifyPort Create(ILogger<NetworkListener> logger)
         {
+            return new InternalBuilder(logger);
+        }
+
+        /// <summary>
+        /// Create new faceted builder for building a <see cref="NetworkListener"/>
+        /// </summary>
+        /// <returns>Faceted builder for <see cref="NetworkListener"/></returns>
+        public static INetworkListenerBuilderSpecifyPort Create()
+        {
+            var logger = NullLoggerFactory.Instance.CreateLogger<NetworkListener>();
             return new InternalBuilder(logger);
         }
     }

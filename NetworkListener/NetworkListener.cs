@@ -2,6 +2,7 @@
 {
     using global::NetworkListener.NetworkClientDataProcessors;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Logging.Abstractions;
     using System;
     using System.Net;
     using System.Net.Security;
@@ -45,6 +46,16 @@
         /// Thread locking object ref
         /// </summary>
         private static readonly object _lock = new object();
+
+        /// <summary>
+        /// Listener started event signature
+        /// </summary>
+        public event EventHandler<ListenerEventArgs>? Started = null;
+
+        /// <summary>
+        /// Listener stopped event signature
+        /// </summary>
+        public event EventHandler<ListenerEventArgs>? Stopped = null;
 
         /// <summary>
         /// Client connected event signature
@@ -125,7 +136,12 @@
         /// <summary>
         /// The listener socket
         /// </summary>
-        protected Socket? ListenerSocket { get; set; }
+        protected Socket? ListenerSocket { get; set; } = null;
+
+        /// <summary>
+        /// Server host name
+        /// </summary>
+        public string? HostName { get; set; } = null;
 
         /// <summary>
         /// The IP address used on the listener
@@ -208,7 +224,7 @@
         /// <param name="networkClientDataProcessor">The network client data processor to process client data</param>
         internal NetworkListener(ILogger<NetworkListener> logger, int? port = null, int? maxClientConnections = null, INetworkClientDataProcessor? networkClientDataProcessor = null)
         {
-            Logger = logger;
+            Logger = logger ?? NullLoggerFactory.Instance.CreateLogger<NetworkListener>();
 
             if (port.HasValue)
             {
@@ -270,6 +286,9 @@
                 usedAnotherCancellationToken = true;
             }
 
+            // Vars
+            IPEndPoint? ipEndPoint = null;
+
             try
             {
                 // Init and configure listener socket
@@ -289,7 +308,7 @@
                     Logger.LogTrace("Building new listener");
 
                     // Build IP end point
-                    var ipEndPoint = new IPEndPoint(IPAddress, Port);
+                    ipEndPoint = new IPEndPoint(IPAddress, Port);
 
                     // New-up listener
                     ListenerSocket = new Socket(IPAddress.AddressFamily, SocketType, ProtocolType);
@@ -301,8 +320,15 @@
                     ListenerSocket.Listen(Port);
 
                     Logger.LogInformation("Listening on end point {EndPoint}", ipEndPoint);
+                    Logger.LogDebug("Using data processor type {NcdpType}", NetworkClientDataProcessor.GetType().FullName);
 
-                    // TODO: Started event
+                    // Trigger started event
+                    Started?.Invoke(this, new ListenerEventArgs
+                    {
+                        LocalEndPoint = ipEndPoint,
+                        HostName = HostName,
+                        Timestamp = DateTime.UtcNow
+                    });
                 }
                 catch (Exception ex)
                 {
@@ -386,7 +412,7 @@
                                     // trigger a async thread and the main thread here will leave
                                     // execution causing count to drop and monitor thread to
                                     // remove from list.
-                                    Task.WaitAll(new Task[] { ProcessConnection(socket, cts.Token) }, cts.Token);
+                                    Task.WaitAll(new Task[] { ProcessClientConnection(socket, cts.Token) }, cts.Token);
                                 }
                                 catch (AggregateException aggEx)
                                 {
@@ -497,6 +523,14 @@
                 }
 
                 Logger.LogTrace("Leaving listener");
+
+                // Trigger stop event
+                Stopped?.Invoke(this, new ListenerEventArgs
+                {
+                    LocalEndPoint = ipEndPoint,
+                    HostName = HostName,
+                    Timestamp = DateTime.UtcNow
+                });
             }
         }
 
@@ -534,55 +568,81 @@
         /// <param name="clientSocket">The accepted client socket</param>
         /// <param name="cancellationToken">A cancellation token to cancel the client socket processing</param>
         /// <returns></returns>
-        private async Task ProcessConnection(Socket clientSocket, CancellationToken cancellationToken)
+        private async Task ProcessClientConnection(Socket clientSocket, CancellationToken cancellationToken)
         {
             if (clientSocket is null)
             {
                 throw new ArgumentNullException(nameof(clientSocket));
             }
 
-            // Get client stream
-            using var clientStream = GetClientStream(clientSocket, Certificate);
-
             // Get or set client name
             var clientName = Thread.CurrentThread.Name ?? Guid.NewGuid().ToString();
 
             Logger.LogInformation("{ClientName} - Processing connection from {RemoteEndPoint}", clientName, clientSocket.RemoteEndPoint);
 
-            // Declare vars and kick off loop to process client
-            uint loopCntr = 0;
-            int dataCntr = 0;
-            while (true)
+            try
             {
-                // Check if data available from client
-                if (clientSocket.Available > 0)
+                // Get client stream
+                using var clientStream = GetClientStream(clientSocket, Certificate);
+
+                // Declare vars and kick off loop to process client
+                uint loopCntr = 0;
+                int dataCntr = 0;
+                while (true)
                 {
-                    // Increment data counter
-                    dataCntr += 1;
-
-                    try
+                    // Check if data available from client
+                    if (clientSocket.Available > 0)
                     {
-                        // Declare buffer size
-                        var maxBufferSize = clientSocket.Available;
-                        if (maxBufferSize > NetworkClientDataProcessor.MaxBufferSize)
+                        // Increment data counter
+                        dataCntr += 1;
+
+                        try
                         {
-                            maxBufferSize = NetworkClientDataProcessor.MaxBufferSize;
-                        }
+                            // Declare buffer size
+                            var maxBufferSize = clientSocket.Available;
+                            if (maxBufferSize > NetworkClientDataProcessor.MaxBufferSize)
+                            {
+                                maxBufferSize = NetworkClientDataProcessor.MaxBufferSize;
+                            }
 
-                        // Declare buffer
-                        var buffer = new byte[maxBufferSize];
+                            // Declare buffer
+                            var buffer = new byte[maxBufferSize];
 
-                        // Read all data from client
-                        var received = -1;
-                        var iteration = 1;
-                        do
-                        {
-                            Logger.LogInformation("{ClientName} - Receiving data from {RemoteEndPoint}; iteration [{Iteration}]", clientName, clientSocket.RemoteEndPoint, iteration);
+                            // Read all data from client
+                            var received = -1;
+                            var iteration = 1;
+                            do
+                            {
+                                Logger.LogInformation("{ClientName} - Receiving data from {RemoteEndPoint}; iteration [{Iteration}]", clientName, clientSocket.RemoteEndPoint, iteration);
 
-                            // Receive data from client
-                            received = await clientStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
+                                // Receive data from client
+                                received = await clientStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
 
-                            Logger.LogDebug("{ClientName} - Received [{BytesReceived}] bytes from {RemoteEndPoint}; iteration [{Iteration}]", clientName, received, clientSocket.RemoteEndPoint, iteration);
+                                Logger.LogDebug("{ClientName} - Received [{BytesReceived}] bytes from {RemoteEndPoint}; iteration [{Iteration}]", clientName, received, clientSocket.RemoteEndPoint, iteration);
+
+                                // Check cancellation
+                                if (cancellationToken.IsCancellationRequested)
+                                {
+                                    Logger.LogInformation("{ClientName} - Cancellation requested for client", clientName);
+                                    break;
+                                }
+
+                                // Pass data to network client data processor
+                                if (!NetworkClientDataProcessor.ReceivedBytes(buffer, received, iteration++))
+                                {
+                                    var ncdpType = NetworkClientDataProcessor.GetType();
+                                    Logger.LogInformation("{ClientName} - Processing informed listener to stop receiving; of type: {NcdpType}", clientName, ncdpType.Name);
+                                    break;
+                                }
+
+                                // Check cancellation
+                                if (cancellationToken.IsCancellationRequested)
+                                {
+                                    Logger.LogInformation("{ClientName} - Cancellation requested for client", clientName);
+                                    break;
+                                }
+                            }
+                            while (received != 0);
 
                             // Check cancellation
                             if (cancellationToken.IsCancellationRequested)
@@ -591,13 +651,19 @@
                                 break;
                             }
 
-                            // Pass data to network client data processor
-                            if (!NetworkClientDataProcessor.ReceivedBytes(buffer, received, iteration++))
+                            // Process received data
+                            var data = NetworkClientDataProcessor.GetReceived();
+                            NetworkClientDataProcessor.ProcessReceived(data);
+
+                            // Trigger data received event if needed
+                            var ts = DateTime.UtcNow;
+                            var remoteEndPoint = clientSocket.RemoteEndPoint;
+                            ClientDataReceived?.Invoke(this, new ClientDataReceivedEventArgs
                             {
-                                var ncpType = NetworkClientDataProcessor.GetType();
-                                Logger.LogInformation("{ClientName} - Processing informed listener to stop receiving; of type: {NcpType}", clientName, ncpType.Name);
-                                break;
-                            }
+                                Data = data,
+                                Timestamp = ts,
+                                RemoteEndPoint = remoteEndPoint
+                            });
 
                             // Check cancellation
                             if (cancellationToken.IsCancellationRequested)
@@ -605,116 +671,101 @@
                                 Logger.LogInformation("{ClientName} - Cancellation requested for client", clientName);
                                 break;
                             }
-                        }
-                        while (received != 0);
 
-                        // Check cancellation
-                        if (cancellationToken.IsCancellationRequested)
+                            // Send acknowledgment to client if needed
+                            var ackBytes = NetworkClientDataProcessor.GetAckBytes(data);
+                            if (ackBytes?.Length > 0)
+                            {
+                                Logger.LogTrace("{ClientName} - Sending ACK to {RemoteEndPoint}", clientName, remoteEndPoint);
+
+                                // Send acknowledgment to client
+                                await clientStream.WriteAsync(ackBytes, 0, ackBytes.Length, cancellationToken);
+                            }
+                        }
+                        catch (OperationCanceledException)
                         {
-                            Logger.LogInformation("{ClientName} - Cancellation requested for client", clientName);
+                            Logger.LogInformation("{ClientName} - Client processing canceled", clientName);
                             break;
                         }
-
-                        // Process received data
-                        var data = NetworkClientDataProcessor.GetReceived();
-                        NetworkClientDataProcessor.ProcessReceived(data);
-
-                        // Trigger data received event if needed
-                        var ts = DateTime.UtcNow;
-                        var remoteEndPoint = clientSocket.RemoteEndPoint;
-                        ClientDataReceived?.Invoke(this, new ClientDataReceivedEventArgs
+                        catch (Exception ex)
                         {
-                            Data = data,
-                            Timestamp = ts,
-                            RemoteEndPoint = remoteEndPoint
-                        });
+                            Logger.LogError(ex, "{ClientName} - Error in processing client connection", clientName);
 
-                        // Check cancellation
-                        if (cancellationToken.IsCancellationRequested)
-                        {
-                            Logger.LogInformation("{ClientName} - Cancellation requested for client", clientName);
-                            break;
+                            // Trigger client error event
+                            ClientError?.Invoke(this, new ClientErrorEventArgs
+                            {
+                                Exception = ex,
+                                RemoteEndPoint = clientSocket.RemoteEndPoint,
+                                Timestamp = DateTime.UtcNow
+                            });
                         }
+                    } // End - if available
 
-                        // Send acknowledgment to client if needed
-                        var ackBytes = NetworkClientDataProcessor.GetAckBytes(data);
-                        if (ackBytes?.Length > 0)
-                        {
-                            Logger.LogTrace("{ClientName} - Sending ACK to {RemoteEndPoint}", clientName, remoteEndPoint);
-
-                            // Send acknowledgment to client
-                            await clientStream.WriteAsync(ackBytes, 0, ackBytes.Length, cancellationToken);
-                        }
-                    }
-                    catch (OperationCanceledException)
+                    // Check cancellation
+                    if (cancellationToken.IsCancellationRequested)
                     {
-                        Logger.LogInformation("{ClientName} - Client processing canceled", clientName);
+                        Logger.LogInformation("{ClientName} - Cancellation requested for client", clientName);
                         break;
                     }
-                    catch (Exception ex)
-                    {
-                        Logger.LogError(ex, "{ClientName} - Error in processing client connection", clientName);
 
-                        // Trigger client error event
-                        ClientError?.Invoke(this, new ClientErrorEventArgs
+                    // Disconnect if needed
+                    if (!clientSocket.IsConnected())
+                    {
+                        Logger.LogInformation("{ClientName} - Client disconnected", clientName);
+                        break;
+                    }
+
+                    // Wait a bit
+                    Thread.Sleep(300);
+
+                    // Check cancellation
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        Logger.LogInformation("{ClientName} - Cancellation requested for client", clientName);
+                        break;
+                    }
+
+                    // Disconnect if needed
+                    if (!clientSocket.IsConnected())
+                    {
+                        Logger.LogInformation("{ClientName} - Client disconnected", clientName);
+                        break;
+                    }
+
+                    // Write waiting message
+                    if ((loopCntr % 10) == 0 || loopCntr == 0)
+                    {
+                        Logger.LogTrace("{ClientName} - Waiting on data; currently on [{LoopCounter}] iteration", clientName, loopCntr);
+
+                        ClientWaiting?.Invoke(this, new ClientWaitingEventArgs
                         {
-                            Exception = ex,
-                            RemoteEndPoint = clientSocket.RemoteEndPoint,
+                            RemoteEndPoint = clientSocket?.RemoteEndPoint,
                             Timestamp = DateTime.UtcNow
                         });
                     }
-                } // End - if available
 
-                // Check cancellation
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    Logger.LogInformation("{ClientName} - Cancellation requested for client", clientName);
-                    break;
-                }
-
-                // Disconnect if needed
-                if (!clientSocket.IsConnected())
-                {
-                    Logger.LogInformation("{ClientName} - Client disconnected", clientName);
-                    break;
-                }
-
-                // Wait a bit
-                Thread.Sleep(300);
-
-                // Check cancellation
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    Logger.LogInformation("{ClientName} - Cancellation requested for client", clientName);
-                    break;
-                }
-
-                // Disconnect if needed
-                if (!clientSocket.IsConnected())
-                {
-                    Logger.LogInformation("{ClientName} - Client disconnected", clientName);
-                    break;
-                }
-
-                // Write waiting message
-                if ((loopCntr % 10) == 0 || loopCntr == 0)
-                {
-                    Logger.LogTrace("{ClientName} - Waiting on data; currently on [{LoopCounter}] iteration", clientName, loopCntr);
-
-                    ClientWaiting?.Invoke(this, new ClientWaitingEventArgs
+                    // Increment loop counter; reset if needed
+                    loopCntr += 1;
+                    if (loopCntr >= (uint.MaxValue - 1))
                     {
-                        RemoteEndPoint = clientSocket?.RemoteEndPoint,
-                        Timestamp = DateTime.UtcNow
-                    });
-                }
+                        loopCntr = 0;
+                    }
+                } // End - while true
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "{ClientName} - Error in client processing", clientName);
 
-                // Increment loop counter; reset if needed
-                loopCntr += 1;
-                if (loopCntr >= (uint.MaxValue - 1))
+                // Trigger client error event
+                ClientError?.Invoke(this, new ClientErrorEventArgs
                 {
-                    loopCntr = 0;
-                }
-            } // End - while true
+                    Exception = ex,
+                    RemoteEndPoint = clientSocket.RemoteEndPoint,
+                    Timestamp = DateTime.UtcNow
+                });
+
+                throw;
+            }
 
             Logger.LogTrace("{ClientName} - Leaving client connection processing", clientName);
         }
