@@ -398,7 +398,7 @@
                             // Client cancellation token source
                             var cts = new CancellationTokenSource();
 
-                            Logger.LogTrace("Remote client connected from {RemoteEndPoint} and named {ClientName}", socket.RemoteEndPoint, clientName);
+                            Logger.LogInformation("Remote client connected from {RemoteEndPoint} and named {ClientName}", socket.RemoteEndPoint, clientName);
 
                             // Create new client thread
                             var thread = new Thread(() =>
@@ -630,8 +630,7 @@
                                 // Pass data to network client data processor
                                 if (!NetworkClientDataProcessor.ReceivedBytes(buffer, received, iteration++))
                                 {
-                                    var ncdpType = NetworkClientDataProcessor.GetType();
-                                    Logger.LogInformation("{ClientName} - Processing informed listener to stop receiving; of type: {NcdpType}", clientName, ncdpType.Name);
+                                    Logger.LogInformation("{ClientName} - Informed by data processor to stop receiving", clientName);
                                     break;
                                 }
 
