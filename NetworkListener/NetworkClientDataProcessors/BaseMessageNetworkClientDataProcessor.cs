@@ -9,6 +9,11 @@ namespace NetworkListener.NetworkClientDataProcessors
     public abstract class BaseMessageNetworkClientDataProcessor : INetworkClientDataProcessor
     {
         /// <summary>
+        /// Check for end marker flag
+        /// </summary>
+        protected readonly bool _checkForEndMarker = false;
+
+        /// <summary>
         /// Logger
         /// </summary>
         protected ILogger Logger { get; }
@@ -19,7 +24,7 @@ namespace NetworkListener.NetworkClientDataProcessors
         /// <summary>
         /// Characters marker to flag the end of network bytes processing
         /// </summary>
-        public virtual string EndOfProcessingMarker { get; init; } = "<EOF>";
+        public virtual string? EndOfProcessingMarker { get; init; } = null;
 
         /// <summary>
         /// String builder object to hold string representation of message received from network connection
@@ -44,6 +49,8 @@ namespace NetworkListener.NetworkClientDataProcessors
         public BaseMessageNetworkClientDataProcessor(ILogger<BaseMessageNetworkClientDataProcessor> logger)
         {
             Logger = logger;
+
+            _checkForEndMarker = !string.IsNullOrWhiteSpace(EndOfProcessingMarker);
         }
 
         /// <inheritdoc cref="INetworkClientDataProcessor.ReceivedBytes(byte[], int, int)"/>
@@ -69,7 +76,8 @@ namespace NetworkListener.NetworkClientDataProcessors
             }
 
             // Check for end of processing marker
-            if (MessageBuilder.ToString().IndexOf(EndOfProcessingMarker) != -1)
+            if (_checkForEndMarker &&
+                MessageBuilder.ToString().IndexOf(EndOfProcessingMarker!) != -1)
             {
                 Logger.LogTrace("End of processing marker found on iteration [{Iteration}]", iteration);
 

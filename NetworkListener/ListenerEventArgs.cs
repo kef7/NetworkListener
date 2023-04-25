@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace NetworkListener
 {
+    /// <summary>
+    /// Network listener event args
+    /// </summary>
     public class ListenerEventArgs : EventArgs
     {
         /// <summary>

@@ -162,7 +162,8 @@
         }
 
         /// <summary>
-        /// CTOR; hide so logic will have to come from static <see cref="Create"/> method
+        /// CTOR; hide so logic will have to come from static <see cref="Create(ILogger{NetworkListener})"/> 
+        /// or <see cref="Create()"/> method
         /// </summary>
         private NetworkListenerBuilder()
         {

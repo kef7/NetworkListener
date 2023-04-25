@@ -2,6 +2,9 @@
 {
     using System.Net.Sockets;
 
+    /// <summary>
+    /// Extensions for <see cref="Socket"/> type
+    /// </summary>
     public static class SocketExtensions
     {
         /// <summary>

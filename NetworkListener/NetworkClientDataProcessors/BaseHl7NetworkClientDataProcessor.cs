@@ -39,7 +39,7 @@ namespace NetworkListener.NetworkClientDataProcessors
             var hl7Msg = data as string;
 
             // Build HL7 ACK
-            var hl7Ack = BuildHl7AcknowledgementMessage(hl7Msg);
+            var hl7Ack = BuildHl7AcknowledgementMessage(hl7Msg!);
 
             return hl7Ack;
         }
