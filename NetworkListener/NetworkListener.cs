@@ -589,7 +589,7 @@
                 while (true)
                 {
                     // Check if data available from client
-                    if (clientSocket.Available > 0)
+                    if (clientSocket!.Available > 0)
                     {
                         // Increment data counter
                         dataCntr += 1;
@@ -639,7 +639,7 @@
                                     break;
                                 }
                             }
-                            while (received != 0);
+                            while (received != 0 && clientSocket.Available > 0);
 
                             // Check cancellation
                             if (cancellationToken.IsCancellationRequested)
