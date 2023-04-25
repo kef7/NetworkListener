@@ -764,7 +764,7 @@
                 throw;
             }
 
-            Logger.LogDebug("{ClientName} - Leaving client connection processing", clientName);
+            Logger.LogTrace("{ClientName} - Leaving client connection processing", clientName);
         }
 
         /// <summary>
