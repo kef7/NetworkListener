@@ -9,11 +9,6 @@ namespace NetworkListener.NetworkClientDataProcessors
     public abstract class BaseMessageNetworkClientDataProcessor : INetworkClientDataProcessor
     {
         /// <summary>
-        /// Check for end marker flag
-        /// </summary>
-        protected readonly bool _checkForEndMarker = false;
-
-        /// <summary>
         /// Logger
         /// </summary>
         protected ILogger Logger { get; }
@@ -25,6 +20,11 @@ namespace NetworkListener.NetworkClientDataProcessors
         /// Characters marker to flag the end of network bytes processing
         /// </summary>
         public virtual string? EndOfProcessingMarker { get; init; } = null;
+
+        /// <summary>
+        /// Check for end marker flag
+        /// </summary>
+        protected bool CheckForEndMarker { get; set; } = false;
 
         /// <summary>
         /// String builder object to hold string representation of message received from network connection
@@ -49,17 +49,6 @@ namespace NetworkListener.NetworkClientDataProcessors
         public BaseMessageNetworkClientDataProcessor(ILogger<BaseMessageNetworkClientDataProcessor> logger)
         {
             Logger = logger;
-
-            // Validate end of processing marker
-            if (!string.IsNullOrWhiteSpace(EndOfProcessingMarker))
-            {
-                _checkForEndMarker = true;
-            }
-            else
-            {
-                _checkForEndMarker = false;
-                EndOfProcessingMarker = null;
-            }
         }
 
         /// <inheritdoc cref="INetworkClientDataProcessor.ReceivedBytes(byte[], int, int)"/>
@@ -85,7 +74,7 @@ namespace NetworkListener.NetworkClientDataProcessors
             }
 
             // Check for end of processing marker
-            if (_checkForEndMarker &&
+            if (CheckForEndMarker &&
                 MessageBuilder.ToString().IndexOf(EndOfProcessingMarker!) != -1)
             {
                 Logger.LogTrace("End of processing marker found on iteration [{Iteration}]", iteration);
@@ -102,7 +91,7 @@ namespace NetworkListener.NetworkClientDataProcessors
         public virtual object? GetReceived()
         {
             // See if end of marker is being checked
-            if (_checkForEndMarker)
+            if (CheckForEndMarker)
             {
                 // Get data and strip end of processing marker
                 var str = MessageBuilder.ToString();
@@ -144,6 +133,10 @@ namespace NetworkListener.NetworkClientDataProcessors
         /// </summary>
         public virtual void ResetProcessing()
         {
+            // Set check based on end of processing marker
+            CheckForEndMarker = !string.IsNullOrWhiteSpace(EndOfProcessingMarker);
+
+            // Reset message building items
             MessageBuilder.Clear();
             Decoder.Reset();
             Encoder.Reset();
