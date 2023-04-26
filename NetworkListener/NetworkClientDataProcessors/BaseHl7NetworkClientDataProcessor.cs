@@ -18,6 +18,12 @@ namespace NetworkListener.NetworkClientDataProcessors
         public virtual string Hl7Version { get; init; }
 
         /// <summary>
+        /// New line character of the same character encoding as <see cref="Decoder"/> 
+        /// and <see cref="Encoder"/>
+        /// </summary>
+        public virtual char? NewLine { get; init; } = null;
+
+        /// <summary>
         /// CTOR for HL7 network client data processor
         /// </summary>
         /// <param name="logger">Generic logger</param>
@@ -29,6 +35,33 @@ namespace NetworkListener.NetworkClientDataProcessors
             {
                 Hl7Version = "2.9";
             }
+
+            // Set encoding new line character
+            try
+            {
+                if (!NewLine.HasValue)
+                {
+                    NewLine = Encoding.UTF8.GetString(new byte[] { (byte)'\n' }).ToCharArray()[0];
+                }
+            }
+            catch
+            {
+                NewLine = null;
+            }
+        }
+
+        /// <inheritdoc cref="INetworkClientDataProcessor.GetReceived"/>
+        public override object? GetReceived()
+        {
+            var hl7Msg = base.GetReceived() as string ?? "";
+
+            // Replace separator characters with the encoding new line character
+            if (NewLine.HasValue)
+            {
+                hl7Msg = hl7Msg.Replace(MllpSeparatorChar, NewLine.Value);
+            }
+
+            return hl7Msg;
         }
 
         /// <inheritdoc cref="BaseMllpNetworkClientDataProcessor.BuildAckMessage(object?)"/>
