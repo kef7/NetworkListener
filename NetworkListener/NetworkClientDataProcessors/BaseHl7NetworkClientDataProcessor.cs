@@ -64,7 +64,7 @@ namespace NetworkListener.NetworkClientDataProcessors
             return hl7Msg;
         }
 
-        /// <inheritdoc cref="BaseMllpNetworkClientDataProcessor.BuildAckMessage(object?)"/>
+        /// <inheritdoc cref="BaseMessageNetworkClientDataProcessor.BuildAckMessage(object?)"/>
         protected override string BuildAckMessage(object? data)
         {
             // Get message- which is the HL7 message that
