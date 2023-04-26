@@ -47,9 +47,6 @@ namespace NetworkListener.NetworkClientDataProcessors
             return message;
         }
 
-        /// <inheritdoc cref="BaseMessageNetworkClientDataProcessor.BuildAckMessage(object?)"/>
-        protected new abstract string BuildAckMessage(object? data);
-
         /// <summary>
         /// Parse inner message out of MLLP wrapped message
         /// </summary>
@@ -78,20 +75,16 @@ namespace NetworkListener.NetworkClientDataProcessors
                     // Calculate what to strip out
                     var startIndex = sbIndex + 1;       // Next char
                     var length = ebIndex - sbIndex - 1; // End minus start minus next last char
-                    if (length <= 0)
+                    if (length > 0)
                     {
-                        length = 1;
+                        // Strip out message
+                        var msg = message.Substring(startIndex, length);
+
+                        Logger.LogTrace("MLLP message parsed");
+
+                        // Replace MLLP segment separator on the end
+                        return msg.TrimEnd(MllpSeparatorChar);
                     }
-
-                    // Strip out message
-                    var msg = message.Substring(startIndex, length);
-
-                    Logger.LogTrace("Message parsed");
-
-                    // Replace MLLP segment separator
-                    return msg
-                        .Replace(MllpSeparatorChar.ToString(), Environment.NewLine)
-                        .TrimEnd(Environment.NewLine[0]);
                 }
             }
 
