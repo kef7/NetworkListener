@@ -50,7 +50,16 @@ namespace NetworkListener.NetworkClientDataProcessors
         {
             Logger = logger;
 
-            _checkForEndMarker = !string.IsNullOrWhiteSpace(EndOfProcessingMarker);
+            // Validate end of processing marker
+            if (!string.IsNullOrWhiteSpace(EndOfProcessingMarker))
+            {
+                _checkForEndMarker = true;
+            }
+            else
+            {
+                _checkForEndMarker = false;
+                EndOfProcessingMarker = null;
+            }
         }
 
         /// <inheritdoc cref="INetworkClientDataProcessor.ReceivedBytes(byte[], int, int)"/>
@@ -92,6 +101,14 @@ namespace NetworkListener.NetworkClientDataProcessors
         /// <inheritdoc cref="INetworkClientDataProcessor.GetReceived"/>
         public virtual object? GetReceived()
         {
+            // See if end of marker is being checked
+            if (_checkForEndMarker)
+            {
+                // Get data and strip end of processing marker
+                var str = MessageBuilder.ToString();
+                return str?.TrimEnd(EndOfProcessingMarker!.ToCharArray()) ?? "";
+            }
+
             return MessageBuilder.ToString();
         }
 
@@ -120,19 +137,7 @@ namespace NetworkListener.NetworkClientDataProcessors
         /// </summary>
         /// <param name="data">Data received from network</param>
         /// <returns>The ACK message to send</returns>
-        protected virtual string BuildAckMessage(object? data)
-        {
-            // Get current message
-            var processedMessage = data as string;
-            if (!string.IsNullOrWhiteSpace(processedMessage))
-            {
-                // Return ACK
-                return "<ACK>";
-            }
-
-            // Return NACK
-            return "<NACK>";
-        }
+        protected abstract string BuildAckMessage(object? data);
 
         /// <summary>
         /// Reset items used to process the bytes received from the network connection
