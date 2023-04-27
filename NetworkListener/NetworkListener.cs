@@ -625,7 +625,7 @@
                                 }
 
                                 // Pass data to network client data processor
-                                if (!NetworkClientDataProcessor.ReceivedBytes(buffer, received, iteration++))
+                                if (!NetworkClientDataProcessor.ProcessReceivedBytes(buffer, received, iteration++))
                                 {
                                     Logger.LogInformation("Client [{ClientRemoteEndPoint}] - Informed by data processor to stop receiving", clientSocket.RemoteEndPoint);
                                     break;
@@ -648,7 +648,7 @@
                             }
 
                             // Process received data
-                            var data = NetworkClientDataProcessor.GetReceived();
+                            var data = NetworkClientDataProcessor.GetReceivedData();
                             NetworkClientDataProcessor.ProcessData(data);
 
                             // Trigger data received event if needed

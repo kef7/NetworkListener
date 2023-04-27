@@ -126,8 +126,8 @@ namespace NetworkListener.NetworkClientDataProcessors
             ResetProcessing();
         }
 
-        /// <inheritdoc cref="INetworkClientDataProcessor.ReceivedBytes(byte[], int, int)"/>
-        public virtual bool ReceivedBytes(byte[] bytes, int received, int iteration)
+        /// <inheritdoc cref="INetworkClientDataProcessor.ProcessReceivedBytes(byte[], int, int)"/>
+        public virtual bool ProcessReceivedBytes(byte[] bytes, int received, int iteration)
         {
             Log(LogLevel.Trace, "Received {Received} bytes on iteration [{Iteration}]", received, iteration);
 
@@ -162,8 +162,8 @@ namespace NetworkListener.NetworkClientDataProcessors
             return true;
         }
 
-        /// <inheritdoc cref="INetworkClientDataProcessor.GetReceived"/>
-        public virtual object? GetReceived()
+        /// <inheritdoc cref="INetworkClientDataProcessor.GetReceivedData"/>
+        public virtual object? GetReceivedData()
         {
             // See if end of marker is being checked
             if (CheckForEndMarker)

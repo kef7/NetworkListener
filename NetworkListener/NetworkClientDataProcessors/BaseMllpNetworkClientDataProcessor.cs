@@ -66,11 +66,11 @@ namespace NetworkListener.NetworkClientDataProcessors
             base.Initialize(remoteEndPoint);
         }
 
-        /// <inheritdoc cref="BaseMessageNetworkClientDataProcessor.GetReceived"/>
-        public override object? GetReceived()
+        /// <inheritdoc cref="BaseMessageNetworkClientDataProcessor.GetReceivedData"/>
+        public override object? GetReceivedData()
         {
             // Parse message body out of MLLP message
-            var mllpMsg = base.GetReceived() as string;
+            var mllpMsg = base.GetReceivedData() as string;
             var message = ParseMllpMessage(mllpMsg);
 
             // Replace MLLP separator characters with the encoding new line character
