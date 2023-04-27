@@ -37,7 +37,7 @@ namespace NetworkListener.NetworkClientDataProcessors
         /// </summary>
         /// <param name="logger">Generic logger</param>
         /// <param name="encoding">Network data character encoding used to decode messages and encode bytes</param>
-        public BaseMllpNetworkClientDataProcessor(ILogger<BaseMllpNetworkClientDataProcessor> logger, Encoding? encoding)
+        public BaseMllpNetworkClientDataProcessor(ILogger<BaseMllpNetworkClientDataProcessor> logger, Encoding? encoding = null)
             : base(logger, encoding)
         {
             // Set to MLLP end character so processing will end if needed
