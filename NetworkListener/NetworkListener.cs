@@ -583,16 +583,12 @@
                 NetworkClientDataProcessor!.Initialize(clientSocket.RemoteEndPoint!);
 
                 // Declare vars and kick off loop to process client
-                uint loopCntr = 0;
-                int dataCntr = 0;
+                uint loopCntr = 1;
                 while (true)
                 {
                     // Check if data available from client
                     if (clientSocket!.Available > 0)
                     {
-                        // Increment data counter
-                        dataCntr += 1;
-
                         try
                         {
                             // Declare buffer size
@@ -608,7 +604,7 @@
                             // Read all data from client
                             var received = -1;
                             var iteration = 1;
-                            do
+                            while (received > 0 && clientSocket.Available > 0)
                             {
                                 Logger.LogInformation("Client [{ClientRemoteEndPoint}] - Receiving data on iteration [{Iteration}]", clientSocket.RemoteEndPoint, iteration);
 
@@ -625,7 +621,7 @@
                                 }
 
                                 // Pass data to network client data processor
-                                if (!NetworkClientDataProcessor.ProcessReceivedBytes(buffer, received, iteration++))
+                                if (!NetworkClientDataProcessor.ProcessReceivedBytes(buffer, received, iteration))
                                 {
                                     Logger.LogInformation("Client [{ClientRemoteEndPoint}] - Informed by data processor to stop receiving", clientSocket.RemoteEndPoint);
                                     break;
@@ -637,8 +633,10 @@
                                     Logger.LogWarning("Client [{ClientRemoteEndPoint}] - Cancellation requested for client", clientSocket.RemoteEndPoint);
                                     break;
                                 }
+
+                                // Increment iteration
+                                iteration += 1;
                             }
-                            while (received != 0 && clientSocket.Available > 0);
 
                             // Check cancellation
                             if (cancellationToken.IsCancellationRequested)
@@ -731,7 +729,7 @@
                     // Write waiting message
                     if ((loopCntr % 10) == 0 || loopCntr == 0)
                     {
-                        Logger.LogDebug("Client [{ClientRemoteEndPoint}] - Waiting for data; currently on [{LoopCounter}] iteration", clientSocket.RemoteEndPoint, loopCntr);
+                        Logger.LogDebug("Client [{ClientRemoteEndPoint}] - Waiting for data; currently on wait [{LoopCounter}]", clientSocket.RemoteEndPoint, loopCntr);
 
                         ClientWaiting?.Invoke(this, new ClientWaitingEventArgs
                         {
