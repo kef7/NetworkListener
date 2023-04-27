@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using System.Net;
 using System.Text;
 
 namespace NetworkListener.NetworkClientDataProcessors
@@ -30,7 +31,7 @@ namespace NetworkListener.NetworkClientDataProcessors
         /// New line character of the same character encoding as <see cref="Decoder"/> 
         /// and <see cref="Encoder"/>
         /// </summary>
-        public virtual char? NewLine { get; init; } = null;
+        public virtual char? NewLine { get; protected set; } = null;
 
         /// <summary>
         /// CTOR for base MLLP network client data processor
@@ -39,6 +40,11 @@ namespace NetworkListener.NetworkClientDataProcessors
         /// <param name="encoding">Network data character encoding used to decode messages and encode bytes</param>
         public BaseMllpNetworkClientDataProcessor(ILogger<BaseMllpNetworkClientDataProcessor> logger, Encoding? encoding = null)
             : base(logger, encoding)
+        {
+        }
+
+        /// <inheritdoc cref="INetworkClientDataProcessor.Initialize(EndPoint)"/>
+        public override void Initialize(EndPoint remoteEndPoint)
         {
             // Set to MLLP end character so processing will end if needed
             EndOfProcessingMarker = MllpEndChar.ToString();
@@ -55,6 +61,9 @@ namespace NetworkListener.NetworkClientDataProcessors
             {
                 NewLine = null;
             }
+
+            // Call base
+            base.Initialize(remoteEndPoint);
         }
 
         /// <inheritdoc cref="BaseMessageNetworkClientDataProcessor.GetReceived"/>
@@ -81,7 +90,7 @@ namespace NetworkListener.NetworkClientDataProcessors
         /// <returns>String of the message that was wrapped in the MLLP block</returns>
         public virtual string ParseMllpMessage(string? message, string? defaultValue = "")
         {
-            Logger.LogTrace("Parsing MLLP message");
+            Log(LogLevel.Trace, "Parsing MLLP message");
 
             if (string.IsNullOrWhiteSpace(message))
             {
@@ -106,7 +115,7 @@ namespace NetworkListener.NetworkClientDataProcessors
                         // Strip out message
                         var msg = message.Substring(startIndex, length);
 
-                        Logger.LogTrace("MLLP message parsed");
+                        Log(LogLevel.Trace, "MLLP message parsed");
 
                         // Replace MLLP segment separator on the end
                         return msg.TrimEnd(MllpSeparatorChar);

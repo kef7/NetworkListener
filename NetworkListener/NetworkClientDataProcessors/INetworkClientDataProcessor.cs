@@ -1,4 +1,6 @@
-﻿namespace NetworkListener.NetworkClientDataProcessors
+﻿using System.Net;
+
+namespace NetworkListener.NetworkClientDataProcessors
 {
     /// <summary>
     /// Interface for client data processing used by <see cref="NetworkListener"/> to processes 
@@ -10,6 +12,12 @@
         /// Max buffer size for byte arrays and received data
         /// </summary>
         int MaxBufferSize { get; }
+
+        /// <summary>
+        /// Initialize the network client data processor
+        /// </summary>
+        /// <param name="remoteEndPoint">Client remote endpoint on the network</param>
+        void Initialize(EndPoint remoteEndPoint);
 
         /// <summary>
         /// Process received bytes from the network socket

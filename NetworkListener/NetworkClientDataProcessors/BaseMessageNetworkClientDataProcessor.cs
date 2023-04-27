@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using System.Net;
 using System.Text;
 
 namespace NetworkListener.NetworkClientDataProcessors
@@ -25,6 +26,11 @@ namespace NetworkListener.NetworkClientDataProcessors
 
         /// <inheritdoc cref="INetworkClientDataProcessor.MaxBufferSize"/>
         public int MaxBufferSize { get; init; } = 4096 * 4096;
+
+        /// <summary>
+        /// The client remote endpoint
+        /// </summary>
+        public EndPoint? RemoteEndPoint { get; set; } = null;
 
         /// <summary>
         /// Characters marker to flag the end of network bytes processing
@@ -109,10 +115,21 @@ namespace NetworkListener.NetworkClientDataProcessors
             EndOfProcessingMarker = endOfProcessingMaker;
         }
 
+        /// <inheritdoc cref="INetworkClientDataProcessor.Initialize(EndPoint)"/>
+        public virtual void Initialize(EndPoint remoteEndPoint)
+        {
+            RemoteEndPoint = remoteEndPoint;
+
+            // Set check based on end of processing marker
+            CheckForEndMarker = !string.IsNullOrWhiteSpace(EndOfProcessingMarker);
+
+            ResetProcessing();
+        }
+
         /// <inheritdoc cref="INetworkClientDataProcessor.ReceivedBytes(byte[], int, int)"/>
         public virtual bool ReceivedBytes(byte[] bytes, int received, int iteration)
         {
-            Logger.LogTrace("Received {Received} bytes on iteration [{Iteration}]", received, iteration);
+            Log(LogLevel.Trace, "Received {Received} bytes on iteration [{Iteration}]", received, iteration);
 
             // Reset processing if on first iteration
             if (iteration == 1)
@@ -135,7 +152,7 @@ namespace NetworkListener.NetworkClientDataProcessors
             if (CheckForEndMarker &&
                 MessageBuilder.ToString().IndexOf(EndOfProcessingMarker!) != -1)
             {
-                Logger.LogTrace("End of processing marker found on iteration [{Iteration}]", iteration);
+                Log(LogLevel.Trace, "End of processing marker found on iteration [{Iteration}]", iteration);
 
                 // Return false to stop processing more
                 return false;
@@ -191,13 +208,44 @@ namespace NetworkListener.NetworkClientDataProcessors
         /// </summary>
         public virtual void ResetProcessing()
         {
-            // Set check based on end of processing marker
-            CheckForEndMarker = !string.IsNullOrWhiteSpace(EndOfProcessingMarker);
-
             // Reset message building items
             MessageBuilder.Clear();
             Decoder.Reset();
             Encoder.Reset();
+        }
+
+        /// <summary>
+        /// Log with default args
+        /// </summary>
+        /// <param name="logLevel">Logging level</param>
+        /// <param name="message">Message to log</param>
+        /// <param name="args">Message args to log</param>
+        protected virtual void Log(LogLevel logLevel, string? message, params object?[] args)
+        {
+            if (string.IsNullOrWhiteSpace(message) ||
+                Logger is null)
+            {
+                return;
+            }
+
+            // Create message with default args mappings like {{NamedItem}}
+            var msg = $"Client [{{ClientName}}] - {message}";
+
+            // Create args array for all args, default and passed in
+            const int defaultArgsCnt = 1;
+            var cnt = args?.Length + defaultArgsCnt ?? defaultArgsCnt;
+            var allArgs = new object?[cnt];
+
+            // Assign our default args
+            // If more here, increase defaultArgsCnt assign values above and
+            // add them to msg like {{NamedItem}}
+            allArgs[0] = RemoteEndPoint?.ToString() ?? "UNKNOWN";
+
+            // Copy over passed in args if needed
+            args?.CopyTo(allArgs, 1);
+
+            // Log message to trace
+            Logger.Log(logLevel, msg, allArgs);
         }
     }
 }
