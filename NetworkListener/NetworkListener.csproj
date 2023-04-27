@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UserSecretsId>10a3d61c-0705-428a-bb90-cd48d0e7e0c8</UserSecretsId>
-		<Version>5.0.0-alpha</Version>
+		<Version>5.0.1-alpha</Version>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
 		<Authors>kef7</Authors>
 		<Description>Network listener</Description>

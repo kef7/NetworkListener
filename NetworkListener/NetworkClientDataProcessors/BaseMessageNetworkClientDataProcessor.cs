@@ -229,7 +229,7 @@ namespace NetworkListener.NetworkClientDataProcessors
             }
 
             // Create message with default args mappings like {{NamedItem}}
-            var msg = $"Client [{{ClientName}}] - {message}";
+            var msg = $"Client [{{ClientRemoteEndPoint}}] - {message}";
 
             // Create args array for all args, default and passed in
             const int defaultArgsCnt = 1;
@@ -239,7 +239,7 @@ namespace NetworkListener.NetworkClientDataProcessors
             // Assign our default args
             // If more here, increase defaultArgsCnt assign values above and
             // add them to msg like {{NamedItem}}
-            allArgs[0] = RemoteEndPoint?.ToString() ?? "UNKNOWN";
+            allArgs[0] = RemoteEndPoint;
 
             // Copy over passed in args if needed
             args?.CopyTo(allArgs, 1);
