@@ -9,6 +9,16 @@ namespace NetworkListener.NetworkClientDataProcessors
     public abstract class BaseMessageNetworkClientDataProcessor : INetworkClientDataProcessor
     {
         /// <summary>
+        /// Default character encoding to use
+        /// </summary>
+        public static readonly Encoding DefaultEncoding = Encoding.UTF8;
+
+        /// <summary>
+        /// Encoding backing var for <see cref="Encoding"/>
+        /// </summary>
+        private Encoding _encoding = null!;
+
+        /// <summary>
         /// Logger
         /// </summary>
         protected ILogger Logger { get; }
@@ -19,7 +29,7 @@ namespace NetworkListener.NetworkClientDataProcessors
         /// <summary>
         /// Characters marker to flag the end of network bytes processing
         /// </summary>
-        public virtual string? EndOfProcessingMarker { get; init; } = null;
+        public virtual string? EndOfProcessingMarker { get; protected set; } = null;
 
         /// <summary>
         /// Check for end marker flag
@@ -32,23 +42,71 @@ namespace NetworkListener.NetworkClientDataProcessors
         protected virtual StringBuilder MessageBuilder { get; } = new();
 
         /// <summary>
+        /// The character encoding for byte data received and sent on the network connection
+        /// </summary>
+        /// <remarks>
+        /// Default encoding of <see cref="Encoding.UTF8"/> will be used when assigning this property as null
+        /// </remarks>
+        public virtual Encoding Encoding
+        {
+            get => _encoding;
+            protected set
+            {
+                // Set to default encoding
+                if (value is null)
+                {
+                    // Set only if not already set to default
+                    if (_encoding != DefaultEncoding)
+                    {
+                        _encoding = DefaultEncoding;
+                        Decoder = _encoding.GetDecoder();
+                        Encoder = _encoding.GetEncoder();
+                    }
+
+                    // Get out
+                    return;
+                }
+
+                // Set encoding and get decoder and encoder if value different
+                if (_encoding != value)
+                {
+                    _encoding = value;
+                    Decoder = _encoding.GetDecoder();
+                    Encoder = _encoding.GetEncoder();
+                }
+            }
+        }
+
+        /// <summary>
         /// Character decoder for bytes (buffer) received from network connection
         /// </summary>
-        protected virtual Decoder Decoder { get; init; } = Encoding.UTF8.GetDecoder();
+        /// <remarks>
+        /// Set when <see cref="Encoding"/> is set to a concrete encoding, like <see cref="Encoding.UTF8"/>
+        /// </remarks>
+        protected virtual Decoder Decoder { get; private set; } = null!;
 
         /// <summary>
         /// Character encoder for bytes to send as acknowledgment response to bytes received from network connection
         /// </summary>
-        protected virtual Encoder Encoder { get; init; } = Encoding.UTF8.GetEncoder();
+        /// <remarks>
+        /// Set when <see cref="Encoding"/> is set to a concrete encoding, like <see cref="Encoding.UTF8"/>
+        /// </remarks>
+        protected virtual Encoder Encoder { get; private set; } = null!;
 
         /// <summary>
-        /// CTOR for base message network client data processor; message should contain an 
-        /// end of receive character to signal stopping of message processing
+        /// CTOR for base message network client data processor; message can contain an end of 
+        /// receive character to signal stopping of current network data received processing
         /// </summary>
         /// <param name="logger">Generic logger</param>
-        public BaseMessageNetworkClientDataProcessor(ILogger<BaseMessageNetworkClientDataProcessor> logger)
+        /// <param name="encoding">Network data character encoding used to decode messages and encode bytes</param>
+        /// <param name="endOfProcessingMaker">End of processing marker character; should be of the same encoding as <paramref name="encoding"/></param>
+        public BaseMessageNetworkClientDataProcessor(ILogger<BaseMessageNetworkClientDataProcessor> logger, Encoding? encoding = null, string? endOfProcessingMaker = null)
         {
             Logger = logger;
+
+            Encoding = encoding!;
+
+            EndOfProcessingMarker = endOfProcessingMaker;
         }
 
         /// <inheritdoc cref="INetworkClientDataProcessor.ReceivedBytes(byte[], int, int)"/>
@@ -101,8 +159,8 @@ namespace NetworkListener.NetworkClientDataProcessors
             return MessageBuilder.ToString();
         }
 
-        /// <inheritdoc cref="INetworkClientDataProcessor.ProcessReceived(object?)"/>
-        public abstract void ProcessReceived(object? data);
+        /// <inheritdoc cref="INetworkClientDataProcessor.ProcessData(object?)"/>
+        public abstract void ProcessData(object? data);
 
         /// <inheritdoc cref="INetworkClientDataProcessor.GetAckBytes(object?)"/>
         public virtual byte[] GetAckBytes(object? data)

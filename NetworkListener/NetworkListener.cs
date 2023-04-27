@@ -650,7 +650,7 @@
 
                             // Process received data
                             var data = NetworkClientDataProcessor.GetReceived();
-                            NetworkClientDataProcessor.ProcessReceived(data);
+                            NetworkClientDataProcessor.ProcessData(data);
 
                             // Trigger data received event if needed
                             var ts = DateTime.UtcNow;

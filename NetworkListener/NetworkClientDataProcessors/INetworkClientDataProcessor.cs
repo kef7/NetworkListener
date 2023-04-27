@@ -21,7 +21,7 @@
         bool ReceivedBytes(byte[] bytes, int received, int iteration);
 
         /// <summary>
-        /// Get the received data as object from all previous sets of received bytes
+        /// Get the received data from all previous calls of received bytes
         /// processed by <see cref="ReceivedBytes(byte[], int, int)"/>
         /// </summary>
         /// <returns>All bytes received decoded into an object</returns>
@@ -31,7 +31,7 @@
         /// Process the data received from the network socket
         /// </summary>
         /// <param name="data">The data received from the network</param>
-        void ProcessReceived(object? data);
+        void ProcessData(object? data);
 
         /// <summary>
         /// Get an acknowledgment in bytes based on the data received from the network
