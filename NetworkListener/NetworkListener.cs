@@ -604,7 +604,7 @@
                             // Read all data from client
                             var received = -1;
                             var iteration = 1;
-                            while (received > 0 && clientSocket.Available > 0)
+                            while (clientSocket.Available > 0)
                             {
                                 Logger.LogInformation("Client [{ClientRemoteEndPoint}] - Receiving data on iteration [{Iteration}]", clientSocket.RemoteEndPoint, iteration);
 
