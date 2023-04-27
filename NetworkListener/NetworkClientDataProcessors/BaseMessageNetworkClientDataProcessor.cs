@@ -129,7 +129,7 @@ namespace NetworkListener.NetworkClientDataProcessors
         /// <inheritdoc cref="INetworkClientDataProcessor.ProcessReceivedBytes(byte[], int, int)"/>
         public virtual bool ProcessReceivedBytes(byte[] bytes, int received, int iteration)
         {
-            Log(LogLevel.Trace, "Received {Received} bytes on iteration [{Iteration}]", received, iteration);
+            Log(LogLevel.Trace, "Processing [{BytesReceived}] bytes received on iteration [{Iteration}]", received, iteration);
 
             // Reset processing if on first iteration
             if (iteration == 1)
