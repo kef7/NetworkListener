@@ -114,18 +114,6 @@
         {
             get
             {
-                if (Monitor.TryEnter(_lock))
-                {
-                    try
-                    {
-                        return _clientThreads.Count;
-                    }
-                    finally
-                    {
-                        Monitor.Exit(_lock);
-                    }
-                }
-
                 lock (_lock)
                 {
                     return _clientThreads.Count;
@@ -355,8 +343,8 @@
                         {
                             Logger.LogWarning("Handling multiple connections is disabled. Waiting for current connection to close...");
 
-                            // Spin wait if having client and should not handle multiple
-                            await WaitForClientProcessing(1);
+                            // Wait, if we have a client and should not handle multiple
+                            WaitForClientProcessing(1);
                         }
 
                         // Is client count maxed
@@ -365,8 +353,8 @@
                         {
                             Logger.LogWarning("Max client connections reached; max connections [{MaxClientConnections}]", MaxClientConnections);
 
-                            // Spin wait if having clients and should not handle more
-                            await WaitForClientProcessing(MaxClientConnections);
+                            // Wait, if we have clients and should not handle more at the moment
+                            WaitForClientProcessing(MaxClientConnections);
                         }
 
                         Logger.LogInformation("Waiting to accept client connections");
@@ -532,10 +520,10 @@
         }
 
         /// <summary>
-        /// Wait for clients to process
+        /// Wait for clients to process and be removed from thread count
         /// </summary>
-        /// <returns></returns>
-        private async Task WaitForClientProcessing(int max)
+        /// <param name="max">Maximum number of client threads to allow</param>
+        private void WaitForClientProcessing(int max)
         {
             // Fix max
             if (max < 1)
@@ -543,20 +531,13 @@
                 max = 1;
             }
 
-            // Spin wait if having client and should not handle multiple
-            await Task.Run(() =>
+            // Wait
+            var cnt = ClientThreadCount;
+            while (cnt >= max)
             {
-                while (ClientThreadCount >= max)
-                {
-                    Task.Delay(1000, CancellationToken);
-
-                    // Check for cancellation
-                    if (CancellationToken.IsCancellationRequested)
-                    {
-                        break;
-                    }
-                }
-            });
+                Thread.Sleep(1000);
+                cnt = ClientThreadCount;
+            }
         }
 
         /// <summary>
@@ -890,7 +871,7 @@
                     CleanUpStoppedClientThreads();
 
                     // Check to see if we need to continue to monitor
-                    if (Monitor.TryEnter(_lock))
+                    if (Monitor.TryEnter(_clientThreads))
                     {
                         try
                         {
@@ -898,7 +879,7 @@
                         }
                         finally
                         {
-                            Monitor.Exit(_lock);
+                            Monitor.Exit(_clientThreads);
                         }
                     }
                     else
