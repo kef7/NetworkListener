@@ -2,7 +2,6 @@
 {
     using global::NetworkListener.NetworkClientDataProcessors;
     using Microsoft.Extensions.Logging;
-    using Microsoft.Extensions.Logging.Abstractions;
     using System;
     using System.Net;
     using System.Net.Sockets;
@@ -17,9 +16,8 @@
         /// <summary>
         /// Internal builder class to handle required method call flow. Use in static <see cref="Create(ILogger{NetworkListener})"/>.
         /// </summary>
-        private class InternalBuilder : INetworkListenerBuilderSpecifyPort, INetworkListenerBuilderSpecifyProcessor, INetworkListenerBuilderCommon
+        private class InternalBuilder : INetworkListenerBuilderSpecifyPort, INetworkListenerBuilderSpecifyNcdpFactory, INetworkListenerBuilderCommon
         {
-
             /// <summary>
             /// The <see cref="NetworkListener"/> to build
             /// </summary>
@@ -31,17 +29,12 @@
             /// <param name="logger">Logger for the <see cref="NetworkListener"/></param>
             public InternalBuilder(ILogger<NetworkListener> logger)
             {
-                if (logger is null)
-                {
-                    throw new ArgumentNullException(nameof(logger));
-                }
-
                 _listener = new NetworkListener(logger);
             }
 
             /// <inheritdoc cref="INetworkListenerBuilderSpecifyPort.UsingPort(int)"/>
             /// <exception cref="ArgumentOutOfRangeException">If <paramref name="port"/> is outside standard port ranges</exception>
-            public INetworkListenerBuilderSpecifyProcessor UsingPort(int port)
+            public INetworkListenerBuilderSpecifyNcdpFactory UsingPort(int port)
             {
                 // Validate port lower range
                 if (port < 0)
@@ -60,23 +53,17 @@
                 return this;
             }
 
-            /// <inheritdoc cref="INetworkListenerBuilderSpecifyProcessor.UsingProcessor(INetworkClientDataProcessor)"/>
-            /// <exception cref="ArgumentNullException">If <paramref name="networkClientDataProcessor"/> is null</exception>
-            public INetworkListenerBuilderCommon UsingProcessor(INetworkClientDataProcessor networkClientDataProcessor)
+            /// <inheritdoc cref="INetworkListenerBuilderSpecifyNcdpFactory.UsingNcdpFactory(Func{INetworkClientDataProcessor})"/>
+            /// <exception cref="ArgumentNullException">If <paramref name="ncdpFactory"/> is null</exception>
+            public INetworkListenerBuilderCommon UsingNcdpFactory(Func<INetworkClientDataProcessor> ncdpFactory)
             {
                 // Validate object
-                if (networkClientDataProcessor is null)
+                if (ncdpFactory is null)
                 {
-                    throw new ArgumentNullException(nameof(networkClientDataProcessor));
+                    throw new ArgumentNullException(nameof(ncdpFactory));
                 }
 
-                // Validate max buffer size
-                if (networkClientDataProcessor.MaxBufferSize < 1)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(networkClientDataProcessor.MaxBufferSize));
-                }
-
-                _listener.NetworkClientDataProcessor = networkClientDataProcessor;
+                _listener.ClientDataProcessorFactory = ncdpFactory;
 
                 return this;
             }
@@ -90,6 +77,7 @@
             }
 
             /// <inheritdoc cref="INetworkListenerBuilderCommon.WithIPAddress(IPAddress)"/>
+            /// <exception cref="ArgumentNullException">If <paramref name="ipAddress"/> is null</exception>
             public INetworkListenerBuilderCommon WithIPAddress(IPAddress ipAddress)
             {
                 if (ipAddress is null)
@@ -119,6 +107,7 @@
             }
 
             /// <inheritdoc cref="INetworkListenerBuilderCommon.WithCert(X509Certificate, SslProtocols?)"/>
+            /// <exception cref="ArgumentNullException">If <paramref name="certificate"/> is null</exception>
             public INetworkListenerBuilderCommon WithCert(X509Certificate certificate, SslProtocols? sslProtocols = null)
             {
                 if (certificate is null)
@@ -170,9 +159,9 @@
         }
 
         /// <summary>
-        /// Create new faceted builder for building a <see cref="NetworkListener"/>
+        /// Create new faceted builder for building a <see cref="NetworkListener"/> object with logging
         /// </summary>
-        /// <param name="logger">Logger for the <see cref="NetworkListener"/></param>
+        /// <param name="logger">Generic logger for the <see cref="NetworkListener"/> object to use</param>
         /// <returns>Faceted builder for <see cref="NetworkListener"/></returns>
         public static INetworkListenerBuilderSpecifyPort Create(ILogger<NetworkListener> logger)
         {
@@ -180,13 +169,12 @@
         }
 
         /// <summary>
-        /// Create new faceted builder for building a <see cref="NetworkListener"/>
+        /// Create new faceted builder for building a <see cref="NetworkListener"/> object
         /// </summary>
         /// <returns>Faceted builder for <see cref="NetworkListener"/></returns>
         public static INetworkListenerBuilderSpecifyPort Create()
         {
-            var logger = NullLoggerFactory.Instance.CreateLogger<NetworkListener>();
-            return new InternalBuilder(logger);
+            return new InternalBuilder(null!);
         }
     }
 }

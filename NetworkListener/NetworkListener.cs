@@ -162,9 +162,9 @@
         public SslProtocols? SslProtocols { get; internal set; } = null;
 
         /// <summary>
-        /// The network client data processor object to process each network
+        /// The network client data processor factory that produces client data processors for each client connection
         /// </summary>
-        public INetworkClientDataProcessor NetworkClientDataProcessor { get; internal set; } = null!;
+        public Func<INetworkClientDataProcessor> ClientDataProcessorFactory { get; internal set; } = null!;
 
         /// <summary>
         /// Handle parallel connections
@@ -206,55 +206,10 @@
         /// <summary>
         /// Network listener constructor
         /// </summary>
-        /// <param name="logger">Required logger for trace logging</param>
-        /// <param name="port">Port to listen on</param>
-        /// <param name="maxClientConnections">Max number of client connection</param>
-        /// <param name="networkClientDataProcessor">The network client data processor to process client data</param>
-        internal NetworkListener(ILogger<NetworkListener> logger, int? port = null, int? maxClientConnections = null, INetworkClientDataProcessor? networkClientDataProcessor = null)
+        /// <param name="logger">Generic logger object</param>
+        internal NetworkListener(ILogger<NetworkListener> logger)
         {
             Logger = logger ?? NullLoggerFactory.Instance.CreateLogger<NetworkListener>();
-
-            if (port.HasValue)
-            {
-                var p = port.Value;
-
-                // Validate port lower range
-                if (p < 0)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(port));
-                }
-
-                // Validate port upper range
-                if (p > 65535)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(port));
-                }
-
-                Port = p;
-            }
-
-            if (maxClientConnections.HasValue)
-            {
-                var mcc = maxClientConnections.Value;
-
-                // Adjust lower range
-                if (mcc < 1)
-                {
-                    mcc = 1;
-                }
-
-                MaxClientConnections = mcc;
-            }
-
-            if (networkClientDataProcessor != null)
-            {
-                if (networkClientDataProcessor.MaxBufferSize < 1)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(networkClientDataProcessor.MaxBufferSize));
-                }
-
-                NetworkClientDataProcessor = networkClientDataProcessor;
-            }
         }
 
         /// <summary>
@@ -308,7 +263,6 @@
                     ListenerSocket.Listen(Port);
 
                     Logger.LogInformation("Listening on end point {EndPoint}", ipEndPoint);
-                    Logger.LogDebug("Using data processor type {NcdpType}", NetworkClientDataProcessor.GetType().FullName);
 
                     // Trigger started event
                     Started?.Invoke(this, new ListenerEventArgs
@@ -560,8 +514,15 @@
                 // Get client stream
                 using var clientStream = GetClientStream(clientSocket, Certificate);
 
-                // Init network client data processor
-                NetworkClientDataProcessor!.Initialize(clientSocket.RemoteEndPoint!);
+                // Generate new client data processor to process client data
+                var clientDataProcessor = ClientDataProcessorFactory.Invoke(); // TODO: Injection point; could inject data into Invoke() here to inform client data processor factory what type of client we are processing...! wow!
+                if (clientDataProcessor is null)
+                {
+                    throw new NullReferenceException($"Could not generate client data processor for processing.");
+                }
+
+                // Init client data processor
+                clientDataProcessor.Initialize(clientSocket.RemoteEndPoint!);
 
                 // Declare vars and kick off loop to process client
                 uint loopCntr = 1;
@@ -574,9 +535,9 @@
                         {
                             // Declare buffer size
                             var maxBufferSize = clientSocket.Available;
-                            if (maxBufferSize > NetworkClientDataProcessor!.MaxBufferSize)
+                            if (maxBufferSize > clientDataProcessor.MaxBufferSize)
                             {
-                                maxBufferSize = NetworkClientDataProcessor.MaxBufferSize;
+                                maxBufferSize = clientDataProcessor.MaxBufferSize;
                             }
 
                             // Declare buffer
@@ -602,7 +563,7 @@
                                 }
 
                                 // Pass data to network client data processor
-                                if (!NetworkClientDataProcessor.ProcessReceivedBytes(buffer, received, iteration))
+                                if (!clientDataProcessor.ProcessReceivedBytes(buffer, received, iteration))
                                 {
                                     Logger.LogInformation("Client [{ClientRemoteEndPoint}] - Informed by data processor to stop receiving", clientSocket.RemoteEndPoint);
                                     break;
@@ -627,8 +588,8 @@
                             }
 
                             // Process received data
-                            var data = NetworkClientDataProcessor.GetReceivedData();
-                            NetworkClientDataProcessor.ProcessData(data);
+                            var data = clientDataProcessor.GetReceivedData();
+                            clientDataProcessor.ProcessData(data);
 
                             // Trigger data received event if needed
                             var ts = DateTime.UtcNow;
@@ -648,7 +609,7 @@
                             }
 
                             // Send acknowledgment to client if needed
-                            var ackBytes = NetworkClientDataProcessor.GetAckBytes(data);
+                            var ackBytes = clientDataProcessor.GetAckBytes(data);
                             if (ackBytes?.Length > 0)
                             {
                                 Logger.LogInformation("Client [{ClientRemoteEndPoint}] - Sending ACK", clientSocket.RemoteEndPoint);

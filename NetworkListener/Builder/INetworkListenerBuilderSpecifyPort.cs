@@ -11,7 +11,7 @@
         /// </summary>
         /// <param name="port">The port number to use</param>
         /// <returns>Ref to builder</returns>
-        INetworkListenerBuilderSpecifyProcessor UsingPort(int port);
+        INetworkListenerBuilderSpecifyNcdpFactory UsingPort(int port);
     }
 }
 
