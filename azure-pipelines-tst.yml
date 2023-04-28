@@ -47,6 +47,7 @@ steps:
     packagesToPack: '$(projFilePath)'
     nobuild: true
     versioningScheme: off
+    includesymbols: true
 
 # Publish to artifacts staging directory
 - task: PublishPipelineArtifact@1
