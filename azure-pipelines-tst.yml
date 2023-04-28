@@ -61,7 +61,7 @@ steps:
   inputs:
     command: push
     feedsToUse: select
-    packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.snupkg'
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
     nuGetFeedType: internal
     publishVstsFeed: '$(feedName)'
     versioningScheme: off
