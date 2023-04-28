@@ -43,7 +43,7 @@ steps:
   displayName: 'dotnet pack'
   inputs:
     command: pack
-    arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory) --include-symbols -p:SymbolPackageFormat=snupkg'
+    arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
     packagesToPack: '$(projFilePath)'
     nobuild: true
     versioningScheme: off
