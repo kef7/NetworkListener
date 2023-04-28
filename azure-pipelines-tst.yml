@@ -43,11 +43,10 @@ steps:
   displayName: 'dotnet pack'
   inputs:
     command: pack
-    arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+    arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory) --include-symbols -p:SymbolPackageFormat=snupkg'
     packagesToPack: '$(projFilePath)'
     nobuild: true
     versioningScheme: off
-    includesymbols: true
 
 # Publish to artifacts staging directory
 - task: PublishPipelineArtifact@1
@@ -61,7 +60,7 @@ steps:
   inputs:
     command: push
     feedsToUse: select
-    packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.snupkg'
     nuGetFeedType: internal
     publishVstsFeed: '$(feedName)'
     versioningScheme: off
