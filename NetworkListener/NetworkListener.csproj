@@ -15,7 +15,7 @@
   </PropertyGroup>
 	
 	<PropertyGroup Condition="'$(Configuration)' != 'Release'">
-		<Version>$(Version)-$(Configuration)</Version>
+		<Version>$(Version)-$(Configuration.ToLower())</Version>
 	</PropertyGroup>
 
 	<ItemGroup>
