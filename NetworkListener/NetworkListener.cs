@@ -517,13 +517,13 @@
                 }
                 catch (Exception ex)
                 {
-                    throw new AggregateException("ERR-NCDP01: Error generating client data processor", ex);
+                    throw new AggregateException("ERR-NCDP-01: Error generating client data processor", ex);
                 }
 
                 // Check for valid client data processor
                 if (clientDataProcessor is null)
                 {
-                    throw new AggregateException($"ERR-NCDP01: Could not generate client data processor for processing", new NullReferenceException(nameof(clientDataProcessor)));
+                    throw new AggregateException($"ERR-NCDP-01: Could not generate client data processor for processing", new NullReferenceException(nameof(clientDataProcessor)));
                 }
 
                 // Init client data processor
@@ -533,7 +533,7 @@
                 }
                 catch (Exception ex)
                 {
-                    throw new AggregateException("ERR-NCDP02: Error initializing client data processor", ex);
+                    throw new AggregateException("ERR-NCDP-02: Error initializing client data processor", ex);
                 }
 
                 // Declare vars and kick off loop to process client
@@ -585,7 +585,7 @@
                                 }
                                 catch (Exception ex)
                                 {
-                                    var errMsg = "ERR-NCDP03: Error in client data processor received bytes call";
+                                    var errMsg = "ERR-NCDP-03: Error in client data processor received bytes call";
                                     Logger.LogError(ex, errMsg);
 
                                     // Trigger client error event
@@ -618,7 +618,7 @@
                             }
                             catch (Exception ex)
                             {
-                                var errMsg = "ERR-NCDP04: Error retrieving client data processor data";
+                                var errMsg = "ERR-NCDP-04: Error retrieving client data processor data";
                                 Logger.LogError(ex, errMsg);
 
                                 // Trigger client error event
@@ -632,7 +632,7 @@
                             }
                             catch (Exception ex)
                             {
-                                var errMsg = "ERR-NCDP05: Error processing client data";
+                                var errMsg = "ERR-NCDP-05: Error processing client data";
                                 Logger.LogError(ex, errMsg);
 
                                 // Trigger client error event
@@ -664,7 +664,7 @@
                             }
                             catch (Exception ex)
                             {
-                                var errMsg = "ERR-NCDP06: Error retrieving client data processor ACK bytes";
+                                var errMsg = "ERR-NCDP-06: Error retrieving client data processor ACK bytes";
                                 Logger.LogError(ex, errMsg);
 
                                 // Trigger client error event
