@@ -359,12 +359,7 @@
                                     var ex = aggEx.GetBaseException();
 
                                     // Trigger client error event
-                                    ClientError?.Invoke(this, new ClientErrorEventArgs
-                                    {
-                                        Exception = ex,
-                                        RemoteEndPoint = socket.RemoteEndPoint,
-                                        Timestamp = DateTime.UtcNow
-                                    });
+                                    OnClientError(socket, ex);
 
                                     // Check if canceled
                                     if (ex is OperationCanceledException)
@@ -515,14 +510,31 @@
                 using var clientStream = GetClientStream(clientSocket, Certificate);
 
                 // Generate new client data processor to process client data
-                var clientDataProcessor = ClientDataProcessorFactory.Invoke(); // TODO: Injection point; could inject data into Invoke() here to inform client data processor factory what type of client we are processing...! wow!
+                INetworkClientDataProcessor clientDataProcessor = null!;
+                try
+                {
+                    clientDataProcessor = ClientDataProcessorFactory.Invoke(); // TODO: Injection point; could inject data into Invoke() here to inform client data processor factory what type of client we are processing...! wow!
+                }
+                catch (Exception ex)
+                {
+                    throw new AggregateException("ERR-NCDP01: Error generating client data processor", ex);
+                }
+
+                // Check for valid client data processor
                 if (clientDataProcessor is null)
                 {
-                    throw new NullReferenceException($"Could not generate client data processor for processing.");
+                    throw new AggregateException($"ERR-NCDP01: Could not generate client data processor for processing", new NullReferenceException(nameof(clientDataProcessor)));
                 }
 
                 // Init client data processor
-                clientDataProcessor.Initialize(clientSocket.RemoteEndPoint!);
+                try
+                {
+                    clientDataProcessor.Initialize(clientSocket.RemoteEndPoint!);
+                }
+                catch (Exception ex)
+                {
+                    throw new AggregateException("ERR-NCDP02: Error initializing client data processor", ex);
+                }
 
                 // Declare vars and kick off loop to process client
                 uint loopCntr = 1;
@@ -563,10 +575,21 @@
                                 }
 
                                 // Pass data to network client data processor
-                                if (!clientDataProcessor.ProcessReceivedBytes(buffer, received, iteration))
+                                try
                                 {
-                                    Logger.LogInformation("Client [{ClientRemoteEndPoint}] - Informed by data processor to stop receiving", clientSocket.RemoteEndPoint);
-                                    break;
+                                    if (!clientDataProcessor.ProcessReceivedBytes(buffer, received, iteration))
+                                    {
+                                        Logger.LogInformation("Client [{ClientRemoteEndPoint}] - Informed by data processor to stop receiving", clientSocket.RemoteEndPoint);
+                                        break;
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    var errMsg = "ERR-NCDP03: Error in client data processor received bytes call";
+                                    Logger.LogError(ex, errMsg);
+
+                                    // Trigger client error event
+                                    OnClientError(clientSocket, new AggregateException(errMsg, ex));
                                 }
 
                                 // Check cancellation
@@ -587,9 +610,34 @@
                                 break;
                             }
 
+                            // Get client data processor data object
+                            object? data = null;
+                            try
+                            {
+                                data = clientDataProcessor.GetReceivedData();
+                            }
+                            catch (Exception ex)
+                            {
+                                var errMsg = "ERR-NCDP04: Error retrieving client data processor data";
+                                Logger.LogError(ex, errMsg);
+
+                                // Trigger client error event
+                                OnClientError(clientSocket, new AggregateException(errMsg, ex));
+                            }
+
                             // Process received data
-                            var data = clientDataProcessor.GetReceivedData();
-                            clientDataProcessor.ProcessData(data);
+                            try
+                            {
+                                clientDataProcessor.ProcessData(data);
+                            }
+                            catch (Exception ex)
+                            {
+                                var errMsg = "ERR-NCDP05: Error processing client data";
+                                Logger.LogError(ex, errMsg);
+
+                                // Trigger client error event
+                                OnClientError(clientSocket, new AggregateException(errMsg, ex));
+                            }
 
                             // Trigger data received event if needed
                             var ts = DateTime.UtcNow;
@@ -608,8 +656,22 @@
                                 break;
                             }
 
+                            // Get acknowledgment from client data processor
+                            byte[] ackBytes = null!;
+                            try
+                            {
+                                ackBytes = clientDataProcessor.GetAckBytes(data);
+                            }
+                            catch (Exception ex)
+                            {
+                                var errMsg = "ERR-NCDP06: Error retrieving client data processor ACK bytes";
+                                Logger.LogError(ex, errMsg);
+
+                                // Trigger client error event
+                                OnClientError(clientSocket, new AggregateException(errMsg, ex));
+                            }
+
                             // Send acknowledgment to client if needed
-                            var ackBytes = clientDataProcessor.GetAckBytes(data);
                             if (ackBytes?.Length > 0)
                             {
                                 Logger.LogInformation("Client [{ClientRemoteEndPoint}] - Sending ACK", clientSocket.RemoteEndPoint);
@@ -628,12 +690,7 @@
                             Logger.LogError(ex, "Client [{ClientRemoteEndPoint}] - Error in processing client connection", clientSocket.RemoteEndPoint);
 
                             // Trigger client error event
-                            ClientError?.Invoke(this, new ClientErrorEventArgs
-                            {
-                                Exception = ex,
-                                RemoteEndPoint = clientSocket.RemoteEndPoint,
-                                Timestamp = DateTime.UtcNow
-                            });
+                            OnClientError(clientSocket, ex);
                         }
                     } // End - if available
 
@@ -693,12 +750,7 @@
                 Logger.LogError(ex, "Client [{ClientRemoteEndPoint}] - Error in client processing", clientSocket.RemoteEndPoint);
 
                 // Trigger client error event
-                ClientError?.Invoke(this, new ClientErrorEventArgs
-                {
-                    Exception = ex,
-                    RemoteEndPoint = clientSocket.RemoteEndPoint,
-                    Timestamp = DateTime.UtcNow
-                });
+                OnClientError(clientSocket, ex);
 
                 throw;
             }
@@ -744,6 +796,22 @@
             }
 
             return sslStream;
+        }
+
+        /// <summary>
+        /// Invoke client error event
+        /// </summary>
+        /// <param name="clientSocket">The socket linked to the client error</param>
+        /// <param name="ex">Optional exception caught during client processing</param>
+        private void OnClientError(Socket clientSocket, Exception? ex = null)
+        {
+            // Invoke client error event
+            ClientError?.Invoke(this, new ClientErrorEventArgs
+            {
+                Exception = ex,
+                RemoteEndPoint = clientSocket.RemoteEndPoint,
+                Timestamp = DateTime.UtcNow
+            });
         }
 
         /// <summary>

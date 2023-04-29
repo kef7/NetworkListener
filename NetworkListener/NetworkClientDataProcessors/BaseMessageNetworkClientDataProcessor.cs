@@ -218,9 +218,10 @@ namespace NetworkListener.NetworkClientDataProcessors
         /// Log with default args
         /// </summary>
         /// <param name="logLevel">Logging level</param>
+        /// <param name="exception">The exception to log</param>
         /// <param name="message">Message to log</param>
         /// <param name="args">Message args to log</param>
-        protected virtual void Log(LogLevel logLevel, string? message, params object?[] args)
+        protected virtual void Log(LogLevel logLevel, Exception? exception, string? message, params object?[] args)
         {
             if (string.IsNullOrWhiteSpace(message) ||
                 Logger is null)
@@ -245,7 +246,19 @@ namespace NetworkListener.NetworkClientDataProcessors
             args?.CopyTo(allArgs, 1);
 
             // Log message to trace
-            Logger.Log(logLevel, msg, allArgs);
+            Logger.Log(logLevel, exception, msg, allArgs);
+        }
+
+        /// <summary>
+        /// Log with default args
+        /// </summary>
+        /// <param name="logLevel">Logging level</param>
+        /// <param name="message">Message to log</param>
+        /// <param name="args">Message args to log</param>
+
+        protected virtual void Log(LogLevel logLevel, string? message, params object?[] args)
+        {
+            Log(logLevel, null, message, args);
         }
     }
 }
