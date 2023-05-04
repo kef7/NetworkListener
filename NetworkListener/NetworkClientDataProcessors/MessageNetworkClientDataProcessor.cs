@@ -53,6 +53,11 @@ namespace NetworkListener.NetworkClientDataProcessors
         protected virtual StringBuilder MessageBuilder { get; set; } = new();
 
         /// <summary>
+        /// Message received from network connection
+        /// </summary>
+        protected virtual string? Message { get; set; } = null;
+
+        /// <summary>
         /// The character encoding for byte data received and sent on the network connection
         /// </summary>
         /// <remarks>
@@ -176,7 +181,16 @@ namespace NetworkListener.NetworkClientDataProcessors
         /// <inheritdoc cref="INetworkClientDataProcessor.GetData"/>
         public virtual object? GetData()
         {
-            return MessageBuilder.ToString();
+            // Return previous message
+            if (Message is not null)
+            {
+                return Message;
+            }
+
+            // Get message from builder
+            Message = MessageBuilder.ToString();
+
+            return Message;
         }
 
         /// <inheritdoc cref="INetworkClientDataProcessor.ProcessData(object?)"/>
@@ -212,6 +226,7 @@ namespace NetworkListener.NetworkClientDataProcessors
         {
             // Reset message building items
             MessageBuilder.Clear();
+            Message = null;
             Decoder.Reset();
             Encoder.Reset();
         }

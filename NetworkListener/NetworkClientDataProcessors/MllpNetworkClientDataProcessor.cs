@@ -9,7 +9,6 @@ namespace NetworkListener.NetworkClientDataProcessors
     /// </summary>
     public abstract class MllpNetworkClientDataProcessor : MessageNetworkClientDataProcessor
     {
-        protected string? _parsedMessage = null;
 
         /// <summary>
         /// MLLP start block character; signals starting of MLLP wrapped message;
@@ -34,6 +33,11 @@ namespace NetworkListener.NetworkClientDataProcessors
         /// and <see cref="Encoder"/>
         /// </summary>
         public virtual char? NewLine { get; protected set; } = null;
+
+        /// <summary>
+        /// Parsed MLLP message from client
+        /// </summary>
+        protected string? ParsedMessage { get; set; } = null;
 
         /// <summary>
         /// CTOR for base MLLP network client data processor
@@ -73,23 +77,23 @@ namespace NetworkListener.NetworkClientDataProcessors
         public override object? GetData()
         {
             // Return previously parsed message
-            if (_parsedMessage is not null)
+            if (ParsedMessage is not null)
             {
-                return _parsedMessage;
+                return ParsedMessage;
             }
 
             // Parse MLLP wrapped message
             var mllpMessage = base.GetData() as string;
-            _parsedMessage = ParseMllpMessage(mllpMessage);
+            ParsedMessage = ParseMllpMessage(mllpMessage);
 
-            return _parsedMessage;
+            return ParsedMessage;
         }
 
         /// <inheritdoc cref="MessageNetworkClientDataProcessor.ResetProcessing"/>
         public override void ResetProcessing()
         {
             base.ResetProcessing();
-            _parsedMessage = null;
+            ParsedMessage = null;
         }
 
         /// <summary>
