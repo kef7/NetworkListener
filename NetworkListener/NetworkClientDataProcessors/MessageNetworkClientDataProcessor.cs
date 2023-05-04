@@ -7,7 +7,7 @@ namespace NetworkListener.NetworkClientDataProcessors
     /// <summary>
     /// Base network client data processor for simple messages that contain an end of message processing marker and ack
     /// </summary>
-    public abstract class BaseMessageNetworkClientDataProcessor : INetworkClientDataProcessor
+    public abstract class MessageNetworkClientDataProcessor : INetworkClientDataProcessor
     {
         /// <summary>
         /// Default character encoding to use
@@ -43,9 +43,14 @@ namespace NetworkListener.NetworkClientDataProcessors
         protected bool CheckForEndMarker { get; set; } = false;
 
         /// <summary>
+        /// Flag to inform processing to strip end marker before processing message
+        /// </summary>
+        public bool StripEndMarker { get; set; } = true;
+
+        /// <summary>
         /// String builder object to hold string representation of message received from network connection
         /// </summary>
-        protected virtual StringBuilder MessageBuilder { get; } = new();
+        protected virtual StringBuilder MessageBuilder { get; set; } = new();
 
         /// <summary>
         /// The character encoding for byte data received and sent on the network connection
@@ -106,7 +111,7 @@ namespace NetworkListener.NetworkClientDataProcessors
         /// <param name="logger">Generic logger</param>
         /// <param name="encoding">Network data character encoding used to decode messages and encode bytes</param>
         /// <param name="endOfProcessingMaker">End of processing marker character; should be of the same encoding as <paramref name="encoding"/></param>
-        public BaseMessageNetworkClientDataProcessor(ILogger<BaseMessageNetworkClientDataProcessor> logger, Encoding? encoding = null, string? endOfProcessingMaker = null)
+        public MessageNetworkClientDataProcessor(ILogger<MessageNetworkClientDataProcessor> logger, Encoding? encoding = null, string? endOfProcessingMaker = null)
         {
             Logger = logger;
 
@@ -126,8 +131,8 @@ namespace NetworkListener.NetworkClientDataProcessors
             ResetProcessing();
         }
 
-        /// <inheritdoc cref="INetworkClientDataProcessor.ProcessReceivedBytes(byte[], int, int)"/>
-        public virtual bool ProcessReceivedBytes(byte[] bytes, int received, int iteration)
+        /// <inheritdoc cref="INetworkClientDataProcessor.ReceiveBytes(in byte[], in int, in int)"/>
+        public virtual bool ReceiveBytes(in byte[] bytes, in int received, in int iteration)
         {
             Log(LogLevel.Trace, "Processing [{BytesReceived}] bytes received on iteration [{Iteration}]", received, iteration);
 
@@ -154,6 +159,12 @@ namespace NetworkListener.NetworkClientDataProcessors
             {
                 Log(LogLevel.Trace, "End of processing marker found on iteration [{Iteration}]", iteration);
 
+                // Strip end of processing marker if needed
+                if (StripEndMarker)
+                {
+                    MessageBuilder = MessageBuilder.Replace(EndOfProcessingMarker!, "");
+                }
+
                 // Return false to stop processing more
                 return false;
             }
@@ -162,46 +173,37 @@ namespace NetworkListener.NetworkClientDataProcessors
             return true;
         }
 
-        /// <inheritdoc cref="INetworkClientDataProcessor.GetReceivedData"/>
-        public virtual object? GetReceivedData()
+        /// <inheritdoc cref="INetworkClientDataProcessor.GetData"/>
+        public virtual object? GetData()
         {
-            // See if end of marker is being checked
-            if (CheckForEndMarker)
-            {
-                // Get data and strip end of processing marker
-                var str = MessageBuilder.ToString();
-                return str?.TrimEnd(EndOfProcessingMarker!.ToCharArray()) ?? "";
-            }
-
             return MessageBuilder.ToString();
         }
 
         /// <inheritdoc cref="INetworkClientDataProcessor.ProcessData(object?)"/>
         public abstract void ProcessData(object? data);
 
-        /// <inheritdoc cref="INetworkClientDataProcessor.GetAckBytes(object?)"/>
-        public virtual byte[] GetAckBytes(object? data)
+        /// <inheritdoc cref="INetworkClientDataProcessor.SendBytes(out byte[], in int, in int)"/>
+        public virtual bool SendBytes(out byte[] bytes, in int sent, in int iteration)
         {
             // Build ACK message
-            var ack = BuildAckMessage(data);
+            var ack = BuildAckMessage();
 
             // Get bytes from ack message
             var chars = ack.ToCharArray();
-            var bytes = new byte[Encoder.GetByteCount(chars, 0, chars.Length, false)];
+            bytes = new byte[Encoder.GetByteCount(chars, 0, chars.Length, false)];
             Encoder.GetBytes(chars, 0, chars.Length, bytes, 0, false);
 
             // Reset processing 
             ResetProcessing();
 
-            return bytes;
+            return false;
         }
 
         /// <summary>
         /// Build the ACK message based on current processed message
         /// </summary>
-        /// <param name="data">Data received from network</param>
         /// <returns>The ACK message to send</returns>
-        protected abstract string BuildAckMessage(object? data);
+        protected abstract string BuildAckMessage();
 
         /// <summary>
         /// Reset items used to process the bytes received from the network connection
@@ -255,7 +257,6 @@ namespace NetworkListener.NetworkClientDataProcessors
         /// <param name="logLevel">Logging level</param>
         /// <param name="message">Message to log</param>
         /// <param name="args">Message args to log</param>
-
         protected virtual void Log(LogLevel logLevel, string? message, params object?[] args)
         {
             Log(logLevel, null, message, args);

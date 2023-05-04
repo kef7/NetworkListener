@@ -43,6 +43,11 @@
         private const int MONITOR_DELAY = 5000;
 
         /// <summary>
+        /// Max allowed buffer size for any buffer created by <see cref="NetworkListener"/>
+        /// </summary>
+        public const int MAX_BUFFER_SIZE = 4096 * 4096;
+
+        /// <summary>
         /// Thread locking object ref
         /// </summary>
         private static readonly object _lock = new object();
@@ -63,14 +68,14 @@
         public event EventHandler<ClientConnectedEventArgs>? ClientConnected = null;
 
         /// <summary>
-        /// Client disconnected event signature
-        /// </summary>
-        public event EventHandler<ClientDisconnectedEventArgs>? ClientDisconnected = null;
-
-        /// <summary>
         /// Client data received event signature
         /// </summary>
         public event EventHandler<ClientDataReceivedEventArgs>? ClientDataReceived = null;
+
+        /// <summary>
+        /// Client disconnected event signature
+        /// </summary>
+        public event EventHandler<ClientDisconnectedEventArgs>? ClientDisconnected = null;
 
         /// <summary>
         /// Client waiting for data event signature
@@ -105,7 +110,7 @@
         /// <summary>
         /// Logger; mainly for trace logging
         /// </summary>
-        protected ILogger Logger { get; }
+        internal ILogger Logger { get; }
 
         /// <summary>
         /// Count of the number of client threads
@@ -207,7 +212,8 @@
         /// Network listener constructor
         /// </summary>
         /// <param name="logger">Generic logger object</param>
-        internal NetworkListener(ILogger<NetworkListener> logger)
+        /// <see cref="INetworkClientDataProcessor"/> that will process client data</param>
+        internal NetworkListener(ILogger<NetworkListener>? logger)
         {
             Logger = logger ?? NullLoggerFactory.Instance.CreateLogger<NetworkListener>();
         }
@@ -513,7 +519,7 @@
                 INetworkClientDataProcessor clientDataProcessor = null!;
                 try
                 {
-                    clientDataProcessor = ClientDataProcessorFactory.Invoke(); // TODO: Injection point; could inject data into Invoke() here to inform client data processor factory what type of client we are processing...! wow!
+                    clientDataProcessor = ClientDataProcessorFactory.Invoke();
                 }
                 catch (Exception ex)
                 {
@@ -545,15 +551,8 @@
                     {
                         try
                         {
-                            // Declare buffer size
-                            var maxBufferSize = clientSocket.Available;
-                            if (maxBufferSize > clientDataProcessor.MaxBufferSize)
-                            {
-                                maxBufferSize = clientDataProcessor.MaxBufferSize;
-                            }
-
                             // Declare buffer
-                            var buffer = new byte[maxBufferSize];
+                            var buffer = BuildClientDataBuffer(clientDataProcessor.MaxBufferSize);
 
                             // Read all data from client
                             var received = -1;
@@ -577,7 +576,7 @@
                                 // Pass data to network client data processor
                                 try
                                 {
-                                    if (!clientDataProcessor.ProcessReceivedBytes(buffer, received, iteration))
+                                    if (!clientDataProcessor.ReceiveBytes(buffer, received, iteration))
                                     {
                                         Logger.LogInformation("Client [{ClientRemoteEndPoint}] - Informed by data processor to stop receiving", clientSocket.RemoteEndPoint);
                                         break;
@@ -610,74 +609,91 @@
                                 break;
                             }
 
-                            // Get client data processor data object
-                            object? data = null;
+                            // Get client data and allow processor to process it
                             try
                             {
-                                data = clientDataProcessor.GetReceivedData();
-                            }
-                            catch (Exception ex)
-                            {
-                                var errMsg = "ERR-NCDP-04: Error retrieving client data processor data";
-                                Logger.LogError(ex, errMsg);
+                                // Get data
+                                var data = clientDataProcessor.GetData();
 
-                                // Trigger client error event
-                                OnClientError(clientSocket, new AggregateException(errMsg, ex));
-                            }
-
-                            // Process received data
-                            try
-                            {
+                                // Process received data
                                 clientDataProcessor.ProcessData(data);
+
+                                // Trigger data received event if needed
+                                var ts = DateTime.UtcNow;
+                                var remoteEndPoint = clientSocket.RemoteEndPoint;
+                                ClientDataReceived?.Invoke(this, new ClientDataReceivedEventArgs
+                                {
+                                    Data = data,
+                                    Timestamp = ts,
+                                    RemoteEndPoint = remoteEndPoint
+                                });
                             }
                             catch (Exception ex)
                             {
-                                var errMsg = "ERR-NCDP-05: Error processing client data";
+                                var errMsg = "ERR-NCDP-04: Error processing client data";
                                 Logger.LogError(ex, errMsg);
 
                                 // Trigger client error event
                                 OnClientError(clientSocket, new AggregateException(errMsg, ex));
                             }
 
-                            // Trigger data received event if needed
-                            var ts = DateTime.UtcNow;
-                            var remoteEndPoint = clientSocket.RemoteEndPoint;
-                            ClientDataReceived?.Invoke(this, new ClientDataReceivedEventArgs
-                            {
-                                Data = data,
-                                Timestamp = ts,
-                                RemoteEndPoint = remoteEndPoint
-                            });
-
-                            // Check cancellation
-                            if (cancellationToken.IsCancellationRequested)
-                            {
-                                Logger.LogWarning("Client [{ClientRemoteEndPoint}] - Cancellation requested for client", clientSocket.RemoteEndPoint);
-                                break;
-                            }
-
-                            // Get acknowledgment from client data processor
-                            byte[] ackBytes = null!;
+                            // Get byte data to send to client from client data processor
+                            var sendIteration = 1;
                             try
                             {
-                                ackBytes = clientDataProcessor.GetAckBytes(data);
+                                // Iterate over client data send processing
+                                var continueToSend = false;
+                                var totalSent = 0;
+                                do
+                                {
+                                    // Check cancellation
+                                    if (cancellationToken.IsCancellationRequested)
+                                    {
+                                        Logger.LogWarning("Client [{ClientRemoteEndPoint}] - Cancellation requested for client", clientSocket.RemoteEndPoint);
+                                        break;
+                                    }
+
+                                    // Declare buffer
+                                    buffer = null;
+
+                                    // Get send bytes from client data processor
+                                    continueToSend = clientDataProcessor.SendBytes(out buffer, totalSent, sendIteration);
+
+                                    // Send bytes to client if needed
+                                    if (buffer?.Length > 0)
+                                    {
+                                        Logger.LogInformation("Client [{ClientRemoteEndPoint}] - Sending data on iteration [{Iteration}]", clientSocket.RemoteEndPoint, sendIteration);
+
+                                        // Send acknowledgment to client
+                                        await clientStream.WriteAsync(buffer, 0, buffer.Length, cancellationToken);
+
+                                        Logger.LogDebug("Client [{ClientRemoteEndPoint}] - Sending [{BytesSent}] bytes on iteration [{Iteration}]", clientSocket.RemoteEndPoint, buffer.Length, sendIteration);
+
+                                        // Increment total sent
+                                        totalSent += buffer.Length;
+                                    }
+
+                                    // Increment iteration
+                                    sendIteration += 1;
+                                }
+                                while (continueToSend);
+
+                                Logger.LogDebug("Client [{ClientRemoteEndPoint}] - Sent [{BytesSent}] in total", clientSocket.RemoteEndPoint, totalSent);
+
+                                // Check cancellation
+                                if (cancellationToken.IsCancellationRequested)
+                                {
+                                    Logger.LogWarning("Client [{ClientRemoteEndPoint}] - Cancellation requested for client", clientSocket.RemoteEndPoint);
+                                    break;
+                                }
                             }
                             catch (Exception ex)
                             {
-                                var errMsg = "ERR-NCDP-06: Error retrieving client data processor ACK bytes";
+                                var errMsg = "ERR-NCDP-05: Error retrieving client data processor send bytes";
                                 Logger.LogError(ex, errMsg);
 
                                 // Trigger client error event
                                 OnClientError(clientSocket, new AggregateException(errMsg, ex));
-                            }
-
-                            // Send acknowledgment to client if needed
-                            if (ackBytes?.Length > 0)
-                            {
-                                Logger.LogInformation("Client [{ClientRemoteEndPoint}] - Sending ACK", clientSocket.RemoteEndPoint);
-
-                                // Send acknowledgment to client
-                                await clientStream.WriteAsync(ackBytes, 0, ackBytes.Length, cancellationToken);
                             }
                         }
                         catch (OperationCanceledException)
@@ -756,6 +772,23 @@
             }
 
             Logger.LogTrace("Client [{ClientRemoteEndPoint}] - Leaving client connection processing", clientSocket.RemoteEndPoint);
+        }
+
+        /// <summary>
+        /// Build client data byte buffer
+        /// </summary>
+        /// <param name="size">Size of byte buffer</param>
+        /// <returns>Byte array of size <paramref name="size"/>; if <paramref name="size"/> is 
+        /// greater than <see cref="MAX_BUFFER_SIZE"/> or zero, this will return a byte array of  
+        /// size <see cref="MAX_BUFFER_SIZE"/></returns>
+        private byte[] BuildClientDataBuffer(int size)
+        {
+            if (size > MAX_BUFFER_SIZE || size <= 0)
+            {
+                return new byte[MAX_BUFFER_SIZE];
+            }
+
+            return new byte[size];
         }
 
         /// <summary>

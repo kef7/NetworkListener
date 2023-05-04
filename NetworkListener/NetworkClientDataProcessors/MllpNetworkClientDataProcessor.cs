@@ -7,8 +7,10 @@ namespace NetworkListener.NetworkClientDataProcessors
     /// <summary>
     /// Base minimal lower layer protocol (MLLP) network client data processor
     /// </summary>
-    public abstract class BaseMllpNetworkClientDataProcessor : BaseMessageNetworkClientDataProcessor
+    public abstract class MllpNetworkClientDataProcessor : MessageNetworkClientDataProcessor
     {
+        protected string? _parsedMessage = null;
+
         /// <summary>
         /// MLLP start block character; signals starting of MLLP wrapped message;
         /// default is ASCII (11) vertical tab
@@ -38,7 +40,7 @@ namespace NetworkListener.NetworkClientDataProcessors
         /// </summary>
         /// <param name="logger">Generic logger</param>
         /// <param name="encoding">Network data character encoding used to decode messages and encode bytes</param>
-        public BaseMllpNetworkClientDataProcessor(ILogger<BaseMllpNetworkClientDataProcessor> logger, Encoding? encoding = null)
+        public MllpNetworkClientDataProcessor(ILogger<MllpNetworkClientDataProcessor> logger, Encoding? encoding = null)
             : base(logger, encoding)
         {
         }
@@ -48,6 +50,7 @@ namespace NetworkListener.NetworkClientDataProcessors
         {
             // Set to MLLP end character so processing will end if needed
             EndOfProcessingMarker = MllpEndChar.ToString();
+            StripEndMarker = false;
 
             // Set encoding new line character
             try
@@ -66,20 +69,27 @@ namespace NetworkListener.NetworkClientDataProcessors
             base.Initialize(remoteEndPoint);
         }
 
-        /// <inheritdoc cref="BaseMessageNetworkClientDataProcessor.GetReceivedData"/>
-        public override object? GetReceivedData()
+        /// <inheritdoc cref="INetworkClientDataProcessor.GetData"/>
+        public override object? GetData()
         {
-            // Parse message body out of MLLP message
-            var mllpMsg = base.GetReceivedData() as string;
-            var message = ParseMllpMessage(mllpMsg);
-
-            // Replace MLLP separator characters with the encoding new line character
-            if (NewLine.HasValue)
+            // Return previously parsed message
+            if (_parsedMessage is not null)
             {
-                message = message.Replace(MllpSeparatorChar, NewLine.Value);
+                return _parsedMessage;
             }
 
-            return message;
+            // Parse MLLP wrapped message
+            var mllpMessage = base.GetData() as string;
+            _parsedMessage = ParseMllpMessage(mllpMessage);
+
+            return _parsedMessage;
+        }
+
+        /// <inheritdoc cref="MessageNetworkClientDataProcessor.ResetProcessing"/>
+        public override void ResetProcessing()
+        {
+            base.ResetProcessing();
+            _parsedMessage = null;
         }
 
         /// <summary>
@@ -113,12 +123,20 @@ namespace NetworkListener.NetworkClientDataProcessors
                     if (length > 0)
                     {
                         // Strip out message
-                        var msg = message.Substring(startIndex, length);
+                        message = message.Substring(startIndex, length);
+
+                        // Replace MLLP segment separator on the end
+                        message = message.TrimEnd(MllpSeparatorChar);
+
+                        // Replace MLLP separator characters with the encoding new line character
+                        if (NewLine.HasValue)
+                        {
+                            message = message.Replace(MllpSeparatorChar, NewLine.Value);
+                        }
 
                         Log(LogLevel.Trace, "MLLP message parsed");
 
-                        // Replace MLLP segment separator on the end
-                        return msg.TrimEnd(MllpSeparatorChar);
+                        return message;
                     }
                 }
             }
@@ -132,7 +150,7 @@ namespace NetworkListener.NetworkClientDataProcessors
         /// <param name="messageSegments">Segments of the message to be wrapped; usually line content of the message</param>
         /// <returns>Wrapped MLLP message</returns>
         /// <remarks>
-        /// Can be used in <see cref="BaseMessageNetworkClientDataProcessor.GetAckBytes"/> 
+        /// Can be used in <see cref="MessageNetworkClientDataProcessor{T}.SendBytes(out byte[], in int, in int)"/> 
         /// for building proper MLLP wrapped message for acknowledgment.
         /// </remarks>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="messageSegments"/> is null</exception>
