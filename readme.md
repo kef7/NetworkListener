@@ -77,7 +77,7 @@ The port to listen on and a factory function to generate your network client dat
 
 ## SSL/TLS Support
 
-To handle secured communications you must provide a host name and a certificate that contains the hostname (other configurations like DNS, or host name with IP use, is beyond this document). You provide the *NetworkListener* object this information with the builder, see below.
+To handle secured communications you must provide a host name and a certificate that contains the host name (other configurations like DNS, or host name with IP use, is beyond this document). You provide the *NetworkListener* object this information with the builder, see below.
 
 ```c#
 // Create network listener builder; you can inject logging here int he Create() static method
@@ -101,7 +101,6 @@ if (cert is not null)
 var netListener = netListenerBuilder
     .WithSocketType(System.Net.Sockets.SocketType.Stream)
     .WithProtocol(System.Net.Sockets.ProtocolType.Tcp)
-    .WithHandleParallelConnections(true)
     .WithMaxClientConnections(1000)
     .Build();
 ```
