@@ -44,7 +44,7 @@
         /// <param name="certificate">The certificate to use for secure communications</param>
         /// <param name="sslProtocols">The secure protocols to use for secure communications; defaults is null- letting environment decide</param>
         /// <returns>Ref to builder</returns>
-        INetworkListenerBuilderCommon WithCert(X509Certificate certificate, SslProtocols? sslProtocols);
+        INetworkListenerBuilderCommon WithCert(X509Certificate certificate, SslProtocols? sslProtocols = null);
 
         /// <summary>
         /// Max client connections
