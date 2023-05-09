@@ -5,7 +5,7 @@ using System.Text;
 namespace NetworkListener.NetworkClientDataProcessors
 {
     /// <summary>
-    /// Base network client data processor for simple messages that contain an end of message processing marker and ack
+    /// Network client data processor for simple messages that contain an end of message processing marker and ACK
     /// </summary>
     public abstract class MessageNetworkClientDataProcessor : INetworkClientDataProcessor
     {

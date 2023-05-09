@@ -5,7 +5,7 @@ using System.Text;
 namespace NetworkListener.NetworkClientDataProcessors
 {
     /// <summary>
-    /// Base minimal lower layer protocol (MLLP) network client data processor
+    /// Minimal lower layer protocol (MLLP) network client data processor
     /// </summary>
     public abstract class MllpNetworkClientDataProcessor : MessageNetworkClientDataProcessor
     {
@@ -154,7 +154,7 @@ namespace NetworkListener.NetworkClientDataProcessors
         /// <param name="messageSegments">Segments of the message to be wrapped; usually line content of the message</param>
         /// <returns>Wrapped MLLP message</returns>
         /// <remarks>
-        /// Can be used in <see cref="MessageNetworkClientDataProcessor{T}.SendBytes(out byte[], in int, in int)"/> 
+        /// Can be used in <see cref="MessageNetworkClientDataProcessor.SendBytes(out byte[], in int, in int)"/> 
         /// for building proper MLLP wrapped message for acknowledgment.
         /// </remarks>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="messageSegments"/> is null</exception>

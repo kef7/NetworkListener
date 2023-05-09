@@ -212,7 +212,6 @@
         /// Network listener constructor
         /// </summary>
         /// <param name="logger">Generic logger object</param>
-        /// <see cref="INetworkClientDataProcessor"/> that will process client data</param>
         internal NetworkListener(ILogger<NetworkListener>? logger)
         {
             Logger = logger ?? NullLoggerFactory.Instance.CreateLogger<NetworkListener>();

@@ -43,7 +43,7 @@
         object? GetData();
 
         /// <summary>
-        /// Process all collected bytes received from the client socket during <see cref="ReceiveBytes(in byte[], in int, in int)"/>
+        /// Process data received from the client socket during <see cref="ReceiveBytes(in byte[], in int, in int)"/>
         /// </summary>
         void ProcessData(object? data);
 
