@@ -15,7 +15,7 @@ using var netListener = BuildNetworkListener();
 netListener.Listen();
 ```
 
-You call also pass in a standard .NET *CancellationToken* to allow for cancelling the listener and all client processing.
+You call also pass in a standard *System.Threading.CancellationToken* to allow for cancelling the listener and all client processing.
 
 ```c#
 var cts = new CancellationTokenSource();
