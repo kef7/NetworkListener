@@ -8,7 +8,7 @@ The *NetworkListener* class is the main component of this library. It handles th
 
 ### Using The Listener
 
-After building a new listener instance call the Listen() method to start the listening for and processing client connections. This call will block the current thread.
+After building a new listener instance, see [NetworkListenerBuilder section](#networklistenerbuilder-class), call the Listen() method to start the listening for and processing client connections. This call will block the current thread.
 
 ```c#
 using var netListener = BuildNetworkListener();
@@ -73,6 +73,8 @@ var netListenerBuilder = NetworkListenerBuilder.Create()
 var netListener = netListenerBuilder.Build();
 ```
 
+The port to listen on and a factory function to generate your network client data processor is required before Build() can be called. The factory function is called for every client that connects to provide the client thread with the appropriate client data processor instance to process the client's data.
+
 ## SSL/TLS Support
 
 To handle secured communications you must provide a host name and a certificate that contains the hostname (other configurations like DNS, or host name with IP use, is beyond this document). You provide the *NetworkListener* object this information with the builder, see below.
@@ -88,7 +90,7 @@ var netListenerBuilder = NetworkListenerBuilder.Create()
     });
 
 // Load cert and provide to builder; will use host system SSL/TLS versions and cyphers
-var cert = LoadCertificate();
+var cert = LoadX509Certificate();
 if (cert is not null)
 {
     netListenerBuilder.WithCert(cert);
