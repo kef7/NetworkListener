@@ -1,6 +1,6 @@
 ﻿namespace NetworkListenerCore.Builder
 {
-    using global::NetworkListenerCore.NetworkClientDataProcessors;
+    using NetworkListenerCore.NetworkClientDataProcessors;
     using Microsoft.Extensions.Logging;
     using System;
     using System.Net;

@@ -1,6 +1,6 @@
 ﻿namespace NetworkListenerCore.Builder
 {
-    using global::NetworkListenerCore.NetworkClientDataProcessors;
+    using NetworkListenerCore.NetworkClientDataProcessors;
 
     /// <summary>
     /// Interface for a faceted <see cref="NetworkListener"/> object builder
