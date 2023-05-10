@@ -220,9 +220,6 @@
         /// <summary>
         /// Start listening, accepting connections, and receiving data
         /// </summary>
-        /// <remarks>
-        /// This will lock the thread it is on
-        /// </remarks>
         /// <returns></returns>
         public async Task Listen(CancellationToken? cancellationToken = null)
         {
