@@ -1,4 +1,4 @@
-﻿namespace NetworkListener
+﻿namespace NetworkListenerCore
 {
     /// <summary>
     /// Client disconnected event args

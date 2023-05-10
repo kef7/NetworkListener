@@ -1,4 +1,4 @@
-﻿namespace NetworkListener.NetworkClientDataProcessors
+﻿namespace NetworkListenerCore.NetworkClientDataProcessors
 {
     using System.Net;
 

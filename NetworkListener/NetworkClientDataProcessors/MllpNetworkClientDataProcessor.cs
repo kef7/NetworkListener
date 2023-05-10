@@ -2,7 +2,7 @@
 using System.Net;
 using System.Text;
 
-namespace NetworkListener.NetworkClientDataProcessors
+namespace NetworkListenerCore.NetworkClientDataProcessors
 {
     /// <summary>
     /// Minimal lower layer protocol (MLLP) network client data processor

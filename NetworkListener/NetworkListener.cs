@@ -1,6 +1,6 @@
-﻿namespace NetworkListener
+﻿namespace NetworkListenerCore
 {
-    using global::NetworkListener.NetworkClientDataProcessors;
+    using global::NetworkListenerCore.NetworkClientDataProcessors;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Logging.Abstractions;
     using System;

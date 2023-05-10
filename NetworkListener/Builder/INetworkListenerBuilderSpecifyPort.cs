@@ -1,4 +1,4 @@
-﻿namespace NetworkListener.Builder
+﻿namespace NetworkListenerCore.Builder
 {
     /// <summary>
     /// Interface for a faceted <see cref="NetworkListener"/> object builder

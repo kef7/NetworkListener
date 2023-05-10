@@ -1,4 +1,4 @@
-﻿namespace NetworkListener.Builder
+﻿namespace NetworkListenerCore.Builder
 {
     using System.Net.Sockets;
     using System.Net;

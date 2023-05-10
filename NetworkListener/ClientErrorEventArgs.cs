@@ -1,4 +1,4 @@
-﻿namespace NetworkListener
+﻿namespace NetworkListenerCore
 {
     /// <summary>
     /// Client error event args

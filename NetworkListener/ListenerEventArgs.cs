@@ -5,7 +5,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace NetworkListener
+namespace NetworkListenerCore
 {
     /// <summary>
     /// Network listener event args
