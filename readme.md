@@ -8,7 +8,7 @@ The *NetworkListener* class is the main component of this library. It handles th
 
 ### Using The Listener
 
-After building a new listener instance, see [NetworkListenerBuilder section](#networklistenerbuilder-class), call the Listen() method to start the listening for and processing client connections. This call will block the current thread.
+After building a new listener instance, see [NetworkListenerBuilder section](#networklistenerbuilder-class), call the Listen() method to start the listening for and processing client connections.
 
 ```c#
 using var netListener = BuildNetworkListener();
