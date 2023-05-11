@@ -7,6 +7,7 @@
     using System.Net.Sockets;
     using System.Security.Authentication;
     using System.Security.Cryptography.X509Certificates;
+    using Microsoft.Extensions.Logging.Abstractions;
 
     /// <summary>
     /// A faceted builder class to build <see cref="NetworkListener"/> objects
@@ -26,10 +27,10 @@
             /// <summary>
             /// CTOR
             /// </summary>
-            /// <param name="logger">Logger for the <see cref="NetworkListener"/></param>
-            public InternalBuilder(ILogger<NetworkListener> logger)
+            /// <param name="loggerFactory">Logger factory used to create loggers</param>
+            public InternalBuilder(ILoggerFactory loggerFactory)
             {
-                _listener = new NetworkListener(logger);
+                _listener = new NetworkListener(loggerFactory);
             }
 
             /// <inheritdoc cref="INetworkListenerBuilderSpecifyPort.UsingPort(int)"/>
@@ -161,11 +162,11 @@
         /// <summary>
         /// Create new faceted builder for building a <see cref="NetworkListener"/> object with logging
         /// </summary>
-        /// <param name="logger">Generic logger for the <see cref="NetworkListener"/> object to use</param>
+        /// <param name="loggerFactory">Logger factory use to generate loggers</param>
         /// <returns>Faceted builder for <see cref="NetworkListener"/></returns>
-        public static INetworkListenerBuilderSpecifyPort Create(ILogger<NetworkListener> logger)
+        public static INetworkListenerBuilderSpecifyPort Create(ILoggerFactory loggerFactory)
         {
-            return new InternalBuilder(logger);
+            return new InternalBuilder(loggerFactory);
         }
 
         /// <summary>
