@@ -109,7 +109,7 @@
             var socket = await serverSocket.AcceptAsync(CancellationToken);
 
             // Process accepted client connection on a new thread
-            if (socket != null)
+            if (socket is not null)
             {
                 // Trigger client connected event
                 ClientConnected?.Invoke(this, new ClientConnectedEventArgs
@@ -586,7 +586,7 @@
         /// <param name="clientSocket">The client socket to dispose off</param>
         private void DisposeClient(Socket? clientSocket)
         {
-            if (clientSocket != null)
+            if (clientSocket is not null)
             {
                 Logger.LogTrace("Disposing client socket for remote endpoint {RemoteEndpoint}", clientSocket.RemoteEndPoint);
                 clientSocket.Close();

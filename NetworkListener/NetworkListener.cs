@@ -201,7 +201,7 @@
         {
             // Cancellation token set
             bool usedAnotherCancellationToken = false;
-            if (cancellationToken != null)
+            if (cancellationToken is not null)
             {
                 CancellationToken = cancellationToken.Value;
                 usedAnotherCancellationToken = true;
@@ -217,7 +217,7 @@
                 try
                 {
                     // Stop current listener if needed
-                    if (ListenerSocket != null)
+                    if (ListenerSocket is not null)
                     {
                         Logger.LogDebug("Tearing down old server setup");
 
@@ -653,7 +653,7 @@
             Thread.Sleep(200);
 
             // Handle client monitor thread
-            if (_monitorThread != null)
+            if (_monitorThread is not null)
             {
                 if (_monitorThread.ThreadState == ThreadState.WaitSleepJoin)
                 {
@@ -667,7 +667,7 @@
             }
 
             // Dispose listener
-            if (ListenerSocket != null)
+            if (ListenerSocket is not null)
             {
                 ListenerSocket.Shutdown(SocketShutdown.Both);
                 ListenerSocket.Close();
