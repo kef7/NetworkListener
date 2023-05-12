@@ -101,9 +101,9 @@
         internal ILogger Logger { get; }
 
         /// <summary>
-        /// The listener socket
+        /// The server socket (listener socket)
         /// </summary>
-        protected Socket? ListenerSocket { get; set; } = null;
+        protected Socket? ServerSocket { get; set; } = null;
 
         /// <summary>
         /// Server host name
@@ -217,22 +217,22 @@
                 try
                 {
                     // Stop current listener if needed
-                    if (ListenerSocket is not null)
+                    if (ServerSocket is not null)
                     {
-                        Logger.LogDebug("Tearing down old server setup");
+                        Logger.LogDebug("Tearing down old server socket");
 
-                        ListenerSocket.Close();
-                        ListenerSocket.Dispose();
-                        ListenerSocket = null;
+                        ServerSocket.Close();
+                        ServerSocket.Dispose();
+                        ServerSocket = null;
                     }
 
-                    Logger.LogDebug("Building new server setup");
+                    Logger.LogDebug("Building new server socket");
 
                     // Build IP end point
                     ipEndPoint = new IPEndPoint(IPAddress, Port);
 
                     // New-up listener
-                    ListenerSocket = serverStrategy.InitServer(ipEndPoint, SocketType, ProtocolType);
+                    ServerSocket = serverStrategy.InitServer(ipEndPoint, SocketType, ProtocolType);
 
                     // Trigger started event
                     Started?.Invoke(this, new ListenerEventArgs
@@ -244,7 +244,7 @@
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError(ex, "Error in server socket configuration on startup");
+                    Logger.LogError(ex, "Error in server socket configuration or startup");
                     return;
                 }
 
@@ -285,7 +285,7 @@
                         clientCntr += 1;
 
                         // Process the server socket strategy
-                        var ctMeta = await serverStrategy.RunClientThread(ListenerSocket, ClientDataProcessorFactory, CancellationToken);
+                        var ctMeta = await serverStrategy.RunClientThread(ServerSocket, ClientDataProcessorFactory, CancellationToken);
 
                         // Check client thread meta
                         if (ctMeta != ClientThreadMeta.None)
@@ -667,12 +667,12 @@
             }
 
             // Dispose listener
-            if (ListenerSocket is not null)
+            if (ServerSocket is not null)
             {
-                ListenerSocket.Shutdown(SocketShutdown.Both);
-                ListenerSocket.Close();
-                ListenerSocket.Dispose();
-                ListenerSocket = null;
+                ServerSocket.Shutdown(SocketShutdown.Both);
+                ServerSocket.Close();
+                ServerSocket.Dispose();
+                ServerSocket = null;
             }
         }
     }
