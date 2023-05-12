@@ -189,7 +189,10 @@
         internal NetworkListener(ILoggerFactory? loggerFactory = null)
         {
             LoggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
+
             Logger = LoggerFactory.CreateLogger<NetworkListener>();
+
+            CancellationToken = _cts.Token;
         }
 
         /// <summary>
