@@ -24,11 +24,12 @@
         Socket InitServer(IPEndPoint ipEndPoint, SocketType type, ProtocolType protocolType);
 
         /// <summary>
-        /// Server processing
+        /// Run server processing in new thread for clients
         /// </summary>
         /// <param name="serverSocket">The server socket</param>
         /// <param name="networkClientDataProcessorFactory">The <see cref="INetworkClientDataProcessor"/> used to process client data by this server</param>
         /// <param name="cancellationToken">Cancellation token for canceling processing of the server socket</param>
+        /// <returns><see cref="ClientThreadMeta"/> object of client thread meta-data</returns>
         Task<ClientThreadMeta> RunClientThread(Socket serverSocket, Func<INetworkClientDataProcessor> networkClientDataProcessorFactory, CancellationToken cancellationToken);
     }
 }
