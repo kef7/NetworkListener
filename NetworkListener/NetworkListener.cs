@@ -5,7 +5,6 @@
     using NetworkListenerCore.NetworkClientDataProcessors;
     using System;
     using System.Net;
-    using System.Net.Security;
     using System.Net.Sockets;
     using System.Security.Authentication;
     using System.Security.Cryptography.X509Certificates;
@@ -247,7 +246,7 @@
                 catch (Exception ex)
                 {
                     Logger.LogError(ex, "Error in server socket configuration or startup");
-                    return;
+                    return; // TODO: should we throw exception here? (custom exception maybe; one that is not caught by outer try-catch)
                 }
 
                 // Loop and accept connections and read/write on network
@@ -260,7 +259,7 @@
                         break;
                     }
 
-                    // Accept and process connections
+                    // Process connections
                     try
                     {
                         // Check to see if we should handle multiple connections
@@ -283,24 +282,24 @@
                             WaitForClientProcessing(MaxClientConnections);
                         }
 
-                        // Increment client count
-                        clientCntr += 1;
-
                         // Process the server socket strategy
                         var ctMeta = await serverStrategy.RunClientThread(ServerSocket, ClientDataProcessorFactory, CancellationToken);
 
-                        // Check client thread meta
+                        // Handle meta
                         if (ctMeta != ClientThreadMeta.None)
                         {
-                            // Add new client thread meta to tracking
-                            lock(_lock)
+                            lock (_lock)
                             {
+                                // Increment client count
+                                clientCntr += 1;
+
+                                // Add new client thread meta to tracking
                                 _clientThreads.Add(ctMeta);
                             }
-                        }
 
-                        // Kick off thread monitor
-                        StartClientThreadMonitoring();
+                            // Kick off thread monitor
+                            StartClientThreadMonitoring();
+                        }
                     }
                     catch (OperationCanceledException)
                     {
