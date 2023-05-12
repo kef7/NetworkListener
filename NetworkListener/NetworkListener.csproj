@@ -12,6 +12,8 @@
 		<IsPackable>true</IsPackable>
 		<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
 		<PackageTags>Network listener; socket listener;.NET 6</PackageTags>
+		<RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))Core</RootNamespace>
+		<AssemblyName>$(MSBuildProjectName)</AssemblyName>
   </PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)' != 'Release'">
