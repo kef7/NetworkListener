@@ -63,7 +63,7 @@ steps:
     feedsToUse: select
     packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;$(Build.ArtifactStagingDirectory)/**/*.snupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
     nuGetFeedType: internal
-    publishVstsFeed: '$(feedName)'
+    publishVstsFeed: '$(feedName)-Debug'
     versioningScheme: off
     allowPackageConflicts: true
     includeSymbols: true
