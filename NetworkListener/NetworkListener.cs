@@ -197,7 +197,6 @@
         /// </summary>
         /// <returns></returns>
         public async Task Listen(CancellationToken? cancellationToken = null)
-        // TODO: Should this be changed to Start(CancellationToken?) ... ?
         {
             // Cancellation token set
             bool usedAnotherCancellationToken = false;
