@@ -7,22 +7,22 @@
     /// <summary>
     /// Client thread meta-data
     /// </summary>
-    internal struct ClientThreadMeta
+    internal readonly struct ClientThreadMeta
     {
         /// <summary>
         /// Client thread name
         /// </summary>
-        public string Name { get; set; }
+        public string Name { get; init; }
 
         /// <summary>
         /// Client thread
         /// </summary>
-        public Thread Thread { get; set; }
+        public Thread Thread { get; init; }
 
         /// <summary>
         /// Cancellation token for client thread cancellation
         /// </summary>
-        public CancellationTokenSource CancellationTokenSource { get; set; }
+        public CancellationTokenSource CancellationTokenSource { get; init; }
 
         /// <summary>
         /// None static client thread meta
