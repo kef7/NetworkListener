@@ -68,7 +68,7 @@
             Logger.LogInformation("Waiting to accept client connections");
 
             // Accept client connection
-            var socket = await serverSocket.AcceptAsync(CancellationToken);
+            var socket = await serverSocket.AcceptAsync(cancellationToken);
 
             // Process accepted client connection on a new thread
             if (socket is not null)
@@ -77,7 +77,7 @@
                 OnClientConnected(socket.RemoteEndPoint);
 
                 // Check for cancellation
-                if (CancellationToken.IsCancellationRequested)
+                if (cancellationToken.IsCancellationRequested)
                 {
                     return ClientThreadMeta.None;
                 }
@@ -95,7 +95,7 @@
                     try
                     {
                         // Wait for client processing
-                        Task.WaitAll(new Task[] { ProcessClientConnection(socket, cts.Token) }, CancellationToken);
+                        Task.WaitAll(new Task[] { ProcessClientConnection(socket, cts.Token) }, cts.Token);
                     }
                     catch (AggregateException aggEx)
                     {
