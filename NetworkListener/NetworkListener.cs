@@ -348,7 +348,7 @@
         private IServerStrategy GetServerStrategy()
         {
             IServerStrategy? serverStrategy = null;
-
+            
             switch (ProtocolType)
             {
                 // Supported connection based protocols
@@ -362,6 +362,7 @@
                         SslProtocols);
                     break;
 
+                case ProtocolType.Idp:
                 case ProtocolType.Udp:
                     serverStrategy = new ConnectionlessServerStrategy(
                         LoggerFactory.CreateLogger(typeof(NetworkListener)));
