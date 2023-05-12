@@ -136,11 +136,7 @@
                     var triggeredOnClientDisconnected = false;
                     try
                     {
-                        // Must wait here so thread will not die.
-                        // Do not call ProcessConnection() with await as this will
-                        // trigger a async thread and the main thread here will leave
-                        // execution causing count to drop and monitor thread to
-                        // remove from list.
+                        // Wait for client processing
                         Task.WaitAll(new Task[] { ProcessClientConnection(socket, cts.Token) }, CancellationToken);
                     }
                     catch (AggregateException aggEx)
