@@ -70,8 +70,6 @@
 
                 Logger.LogDebug("Client [{ClientRemoteEndPoint}] - Received [{BytesReceived}] bytes", remoteIpEndPoint, received);
 
-                Logger.LogTrace("Client [{ClientRemoteEndPoint}] - Init NCDP", remoteIpEndPoint);
-
                 // Init client data processor
                 clientDataProcessor.Initialize(remoteIpEndPoint!);
 
@@ -83,7 +81,6 @@
                 }
 
                 // Send bytes to client data processor
-                Logger.LogTrace("Client [{ClientRemoteEndPoint}] - NCDP Receive", remoteIpEndPoint);
                 try
                 {
                     clientDataProcessor.ReceiveBytes(buffer, received, 1);
@@ -176,8 +173,6 @@
                 // Start thread
                 thread.Start();
 
-                Logger.LogTrace("Exiting connectionless strategy call");
-
                 return ctMeta;
             }
             catch (Exception ex)
@@ -191,7 +186,6 @@
         private async Task ProcessClient(Socket serverSocket, IPEndPoint? remoteIpEndPoint, INetworkClientDataProcessor clientDataProcessor, CancellationToken cancellationToken)
         {
             // Get client data and allow processor to process it
-            Logger.LogTrace("Client [{ClientRemoteEndPoint}] - NCDP Process Data", remoteIpEndPoint);
             try
             {
                 // Get data
@@ -220,7 +214,6 @@
             }
 
             // Get byte data to send to client from client data processor
-            Logger.LogTrace("Client [{ClientRemoteEndPoint}] - NCDP Send", remoteIpEndPoint);
             var sendIteration = 1;
             try
             {
