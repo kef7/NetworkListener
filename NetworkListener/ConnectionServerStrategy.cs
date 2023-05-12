@@ -11,47 +11,12 @@
     /// <summary>
     /// Server strategy for a connection based network client processing; like TCP clients.
     /// </summary>
-    internal class ConnectionServerStrategy : IServerStrategy
+    internal class ConnectionServerStrategy : ServerStrategy
     {
         /// <summary>
         /// Thread locking object ref
         /// </summary>
         private static readonly object _lock = new object();
-
-        /// <summary>
-        /// Client connected event signature
-        /// </summary>
-        public event EventHandler<ClientConnectedEventArgs>? ClientConnected = null;
-
-        /// <summary>
-        /// Client data received event signature
-        /// </summary>
-        public event EventHandler<ClientDataReceivedEventArgs>? ClientDataReceived = null;
-
-        /// <summary>
-        /// Client disconnected event signature
-        /// </summary>
-        public event EventHandler<ClientDisconnectedEventArgs>? ClientDisconnected = null;
-
-        /// <summary>
-        /// Client error event signature
-        /// </summary>
-        public event EventHandler<ClientErrorEventArgs>? ClientError = null;
-
-        /// <summary>
-        /// Generic logger
-        /// </summary>
-        protected ILogger Logger { get; }
-        
-        /// <summary>
-        /// Cancellation token
-        /// </summary>
-        protected CancellationToken CancellationToken { get; set; } = CancellationToken.None;
-
-        /// <summary>
-        /// The network client data processor factory that produces client data processors for each client connection
-        /// </summary>
-        public Func<INetworkClientDataProcessor> ClientDataProcessorFactory { get; internal set; } = null!;
 
         /// <summary>
         /// The certificate to use for SSL/TLS communications
@@ -70,16 +35,15 @@
         /// <param name="certificate">Certificate to use for secure communications</param>
         /// <param name="sslProtocols">SSL/TLS protocols to use for secure communications</param>
         public ConnectionServerStrategy(ILogger logger, X509Certificate? certificate = null, SslProtocols? sslProtocols = null)
+            : base(logger)
         {
-            Logger = logger;
-
             Certificate = certificate;
 
             SslProtocols = sslProtocols;
         }
 
         /// <inheritdoc cref="IServerStrategy.InitServer(IPEndPoint, SocketType, ProtocolType)"/>
-        public Socket InitServer(IPEndPoint ipEndPoint, SocketType type, ProtocolType protocolType)
+        public override Socket InitServer(IPEndPoint ipEndPoint, SocketType type, ProtocolType protocolType)
         {
             // New up server socket
             var serverSocket = new Socket(ipEndPoint.AddressFamily, type, protocolType);
@@ -97,13 +61,11 @@
         }
 
         /// <inheritdoc cref="IServerStrategy.RunClientThread(Socket, Func{INetworkClientDataProcessor}, CancellationToken)"/>
-        public async Task<ClientThreadMeta> RunClientThread(Socket serverSocket, Func<INetworkClientDataProcessor> networkClientDataProcessorFactory, CancellationToken cancellationToken)
+        public override async Task<ClientThreadMeta> RunClientThread(Socket serverSocket, Func<INetworkClientDataProcessor> networkClientDataProcessorFactory, CancellationToken cancellationToken)
         {
+            await base.RunClientThread(serverSocket, networkClientDataProcessorFactory, cancellationToken);
+
             Logger.LogInformation("Waiting to accept client connections");
-
-            ClientDataProcessorFactory = networkClientDataProcessorFactory;
-
-            CancellationToken = cancellationToken;
 
             // Accept client connection
             var socket = await serverSocket.AcceptAsync(CancellationToken);
@@ -112,11 +74,7 @@
             if (socket is not null)
             {
                 // Trigger client connected event
-                ClientConnected?.Invoke(this, new ClientConnectedEventArgs
-                {
-                    RemoteEndPoint = socket.RemoteEndPoint,
-                    Timestamp = DateTime.UtcNow
-                });
+                OnClientConnected(socket.RemoteEndPoint);
 
                 // Check for cancellation
                 if (CancellationToken.IsCancellationRequested)
@@ -145,7 +103,7 @@
                         var ex = aggEx.GetBaseException();
 
                         // Trigger client error event
-                        OnClientError(socket, ex);
+                        OnClientError(socket.RemoteEndPoint, ex);
 
                         // Check if canceled
                         if (ex is OperationCanceledException)
@@ -153,7 +111,7 @@
                             Logger.LogWarning("Client [{ClientRemoteEndPoint}] - Processing thread canceled", socket.RemoteEndPoint);
 
                             // Trigger client disconnected event
-                            OnClientDisconnected(socket, ex as OperationCanceledException);
+                            OnClientDisconnected(socket.RemoteEndPoint, ex as OperationCanceledException);
                             triggeredOnClientDisconnected = true;
                         }
                         // Check if disconnected abruptly
@@ -162,7 +120,7 @@
                             Logger.LogError("Client [{ClientRemoteEndPoint}] - Disconnected abruptly", socket.RemoteEndPoint);
 
                             // Trigger client disconnected event
-                            OnClientDisconnected(socket, sEx);
+                            OnClientDisconnected(socket.RemoteEndPoint, sEx);
                             triggeredOnClientDisconnected = true;
                         }
                         else
@@ -183,7 +141,7 @@
                             if (!triggeredOnClientDisconnected)
                             {
                                 // Trigger client disconnected event
-                                OnClientDisconnected(socket);
+                                OnClientDisconnected(socket.RemoteEndPoint);
                             }
                         }
 
@@ -215,7 +173,7 @@
         }
 
         /// <summary>
-        /// Process accepted client socket connection which is done in <see cref="Listen(CancellationToken?)"/>
+        /// Process accepted client socket connection
         /// </summary>
         /// <param name="clientSocket">The accepted client socket</param>
         /// <param name="cancellationToken">A cancellation token to cancel the client socket processing</param>
@@ -307,7 +265,7 @@
                                     Logger.LogError(ex, errMsg);
 
                                     // Trigger client error event
-                                    OnClientError(clientSocket, new AggregateException(errMsg, ex));
+                                    OnClientError(clientSocket.RemoteEndPoint, new AggregateException(errMsg, ex));
                                 }
 
                                 // Check cancellation
@@ -340,12 +298,7 @@
                                 // Trigger data received event if needed
                                 var ts = DateTime.UtcNow;
                                 var remoteEndPoint = clientSocket.RemoteEndPoint;
-                                ClientDataReceived?.Invoke(this, new ClientDataReceivedEventArgs
-                                {
-                                    Data = data,
-                                    Timestamp = ts,
-                                    RemoteEndPoint = remoteEndPoint
-                                });
+                                OnClientDataReceived(clientSocket.RemoteEndPoint, data);
                             }
                             catch (Exception ex)
                             {
@@ -353,7 +306,7 @@
                                 Logger.LogError(ex, errMsg);
 
                                 // Trigger client error event
-                                OnClientError(clientSocket, new AggregateException(errMsg, ex));
+                                OnClientError(clientSocket.RemoteEndPoint, new AggregateException(errMsg, ex));
                             }
 
                             // Get byte data to send to client from client data processor
@@ -412,7 +365,7 @@
                                 Logger.LogError(ex, errMsg);
 
                                 // Trigger client error event
-                                OnClientError(clientSocket, new AggregateException(errMsg, ex));
+                                OnClientError(clientSocket.RemoteEndPoint, new AggregateException(errMsg, ex));
                             }
                         }
                         catch (OperationCanceledException)
@@ -425,7 +378,7 @@
                             Logger.LogError(ex, "Client [{ClientRemoteEndPoint}] - Error in processing client connection", clientSocket.RemoteEndPoint);
 
                             // Trigger client error event
-                            OnClientError(clientSocket, ex);
+                            OnClientError(clientSocket.RemoteEndPoint, ex);
                         }
                     } // End - if available
 
@@ -479,7 +432,7 @@
                 Logger.LogError(ex, "Client [{ClientRemoteEndPoint}] - Error in client processing", clientSocket.RemoteEndPoint);
 
                 // Trigger client error event
-                OnClientError(clientSocket, ex);
+                OnClientError(clientSocket.RemoteEndPoint, ex);
 
                 throw;
             }
@@ -545,38 +498,6 @@
         }
 
         /// <summary>
-        /// Invoke client error event
-        /// </summary>
-        /// <param name="clientSocket">The socket linked to the client error</param>
-        /// <param name="ex">Optional exception caught during client processing</param>
-        private void OnClientError(Socket clientSocket, Exception? ex = null)
-        {
-            // Invoke client error event
-            ClientError?.Invoke(this, new ClientErrorEventArgs
-            {
-                Exception = ex,
-                RemoteEndPoint = clientSocket.RemoteEndPoint,
-                Timestamp = DateTime.UtcNow
-            });
-        }
-
-        /// <summary>
-        /// Invoke client disconnected event
-        /// </summary>
-        /// <param name="clientSocket">The socket that disconnected</param>
-        /// <param name="ex">Optional exception that caused the disconnection</param>
-        private void OnClientDisconnected(Socket clientSocket, Exception? ex = null)
-        {
-            // Invoke client disconnect if possible
-            ClientDisconnected?.Invoke(this, new ClientDisconnectedEventArgs
-            {
-                Exception = ex,
-                RemoteEndPoint = clientSocket?.RemoteEndPoint,
-                Timestamp = DateTime.UtcNow
-            });
-        }
-
-        /// <summary>
         /// Dispose client socket
         /// </summary>
         /// <param name="clientSocket">The client socket to dispose off</param>
@@ -589,10 +510,6 @@
                 clientSocket.Dispose();
                 clientSocket = null;
             }
-        }
-
-        public void Dispose()
-        {
         }
     }
 }
