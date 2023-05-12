@@ -15,7 +15,8 @@
     public class NetworkListenerBuilder
     {
         /// <summary>
-        /// Internal builder class to handle required method call flow. Use in static <see cref="Create(ILogger{NetworkListener})"/>.
+        /// Internal builder class to handle required method call flow. Use in static <see cref="Create(ILoggerFactory)"/> 
+        /// or <see cref="Create()"/> method.
         /// </summary>
         private class InternalBuilder : INetworkListenerBuilderSpecifyPort, INetworkListenerBuilderSpecifyNcdpFactory, INetworkListenerBuilderCommon
         {
@@ -152,7 +153,7 @@
         }
 
         /// <summary>
-        /// CTOR; hide so logic will have to come from static <see cref="Create(ILogger{NetworkListener})"/> 
+        /// CTOR; hide so logic will have to come from static <see cref="Create(ILoggerFactory)"/> 
         /// or <see cref="Create()"/> method
         /// </summary>
         private NetworkListenerBuilder()
