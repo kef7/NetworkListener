@@ -53,7 +53,7 @@
                 var clientDataProcessor = ClientDataProcessorFactory.Invoke();
 
                 // Build buffer
-                var buffer = new byte[clientDataProcessor.MaxBufferSize];
+                var buffer = BuildClientDataBuffer(clientDataProcessor.MaxBufferSize);
 
                 // Receive bytes of data; block thread
                 var received = serverSocket.ReceiveFrom(buffer, SocketFlags.None, ref remoteEndPoint);
@@ -111,7 +111,7 @@
                     try
                     {
                         // Wait for client processing
-                        Task.WaitAll(new Task[] { ProcessClient(serverSocket, remoteIpEndPoint, clientDataProcessor, cts.Token) }, cts.Token);
+                        Task.WaitAll(new Task[] { ProcessClientData(serverSocket, remoteIpEndPoint, clientDataProcessor, cts.Token) }, cts.Token);
                     }
                     catch (AggregateException aggEx)
                     {
@@ -183,7 +183,15 @@
             return ClientThreadMeta.None;
         }
 
-        private async Task ProcessClient(Socket serverSocket, IPEndPoint? remoteIpEndPoint, INetworkClientDataProcessor clientDataProcessor, CancellationToken cancellationToken)
+        /// <summary>
+        /// Process client communications
+        /// </summary>
+        /// <param name="serverSocket">Server socket used to send and received client data</param>
+        /// <param name="remoteIpEndPoint">Client remote IP end-point</param>
+        /// <param name="clientDataProcessor">The <see cref="INetworkClientDataProcessor"/> used to process the client data</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns></returns>
+        private async Task ProcessClientData(Socket serverSocket, IPEndPoint? remoteIpEndPoint, INetworkClientDataProcessor clientDataProcessor, CancellationToken cancellationToken)
         {
             // Get client data and allow processor to process it
             try
