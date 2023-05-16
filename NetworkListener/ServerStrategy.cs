@@ -48,14 +48,33 @@
             Logger = logger;
         }
 
+        /// <inheritdoc cref="IServerStrategy.InitServer(IPEndPoint, SocketType, ProtocolType)"/>
         public abstract Socket InitServer(IPEndPoint ipEndPoint, SocketType type, ProtocolType protocolType);
 
+        /// <inheritdoc cref="IServerStrategy.RunClientThread(Socket, Func{INetworkClientDataProcessor}, CancellationToken)"/>
         public virtual async Task<ClientThreadMeta> RunClientThread(Socket serverSocket, Func<INetworkClientDataProcessor> networkClientDataProcessorFactory, CancellationToken cancellationToken)
         {
             ClientDataProcessorFactory = networkClientDataProcessorFactory;
             CancellationToken = cancellationToken;
 
             return await Task.FromResult(ClientThreadMeta.None);
+        }
+
+        /// <summary>
+        /// Build client data byte buffer
+        /// </summary>
+        /// <param name="size">Size of byte buffer</param>
+        /// <returns>Byte array of size <paramref name="size"/>; if <paramref name="size"/> is 
+        /// greater than <see cref="IServerStrategy.MAX_BUFFER_SIZE"/> or zero, this will return a byte array of  
+        /// size <see cref="IServerStrategy.MAX_BUFFER_SIZE"/></returns>
+        public virtual byte[] BuildClientDataBuffer(int size)
+        {
+            if (size < 0 || size > IServerStrategy.MAX_BUFFER_SIZE)
+            {
+                return new byte[IServerStrategy.MAX_BUFFER_SIZE];
+            }
+
+            return new byte[size];
         }
 
         /// <summary>
