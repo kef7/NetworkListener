@@ -441,23 +441,6 @@
         }
 
         /// <summary>
-        /// Build client data byte buffer
-        /// </summary>
-        /// <param name="size">Size of byte buffer</param>
-        /// <returns>Byte array of size <paramref name="size"/>; if <paramref name="size"/> is 
-        /// greater than <see cref="IServerStrategy.MAX_BUFFER_SIZE"/> or zero, this will return a byte array of  
-        /// size <see cref="IServerStrategy.MAX_BUFFER_SIZE"/></returns>
-        private byte[] BuildClientDataBuffer(int size)
-        {
-            if (size > IServerStrategy.MAX_BUFFER_SIZE || size <= 0)
-            {
-                return new byte[IServerStrategy.MAX_BUFFER_SIZE];
-            }
-
-            return new byte[size];
-        }
-
-        /// <summary>
         /// Get client stream
         /// </summary>
         /// <param name="clientSocket">The client socket to get stream of</param>
