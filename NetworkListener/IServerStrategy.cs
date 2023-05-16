@@ -12,7 +12,7 @@
         /// <summary>
         /// Max allowed buffer size for any buffer
         /// </summary>
-        public const int MAX_BUFFER_SIZE = 4096 * 4096;
+        public static readonly int MAX_BUFFER_SIZE = Array.MaxLength;
 
         /// <summary>
         /// Initialize the server socket
