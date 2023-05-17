@@ -9,6 +9,7 @@
 		<Authors>kef7</Authors>
 		<Description>Multithreaded network client listener with injectable client processing and support for secured communications over SSL/TLS.</Description>
 		<RepositoryUrl>https://github.com/kef7/NetworkListener</RepositoryUrl>
+		<PackageReadmeFile>readme.md</PackageReadmeFile>
 		<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
 		<PackageTags>Network listener; socket listener;.NET 6</PackageTags>
 		<RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))Core</RootNamespace>
@@ -22,6 +23,12 @@
 	<PropertyGroup Condition="'$(Configuration)' != 'Release'">
 		<Version>$(Version)-$(Configuration.ToLower())</Version>
 	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="..\readme.md" Pack="true" PackagePath="$(PackageReadmeFile)">
+			<Visible>false</Visible>
+		</None>
+	</ItemGroup>
 
 	<ItemGroup>
 		<None Include="..\LICENSE.txt" Pack="true" PackagePath="$(PackageLicenseFile)">
