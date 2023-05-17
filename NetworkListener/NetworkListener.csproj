@@ -1,28 +1,26 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <UserSecretsId>10a3d61c-0705-428a-bb90-cd48d0e7e0c8</UserSecretsId>
-		<Version>1.0.0-rc4</Version>
-		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+	<PropertyGroup>
+		<TargetFramework>net6.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<UserSecretsId>10a3d61c-0705-428a-bb90-cd48d0e7e0c8</UserSecretsId>
+		<Version>1.0.0-rc5</Version>
 		<Authors>kef7</Authors>
-		<Description>Network listener</Description>
-		<IsPackable>true</IsPackable>
+		<Description>Multithreaded network client listener with injectable client processing and support for secured communications over SSL/TLS.</Description>
+		<RepositoryUrl>https://github.com/kef7/NetworkListener</RepositoryUrl>
 		<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
 		<PackageTags>Network listener; socket listener;.NET 6</PackageTags>
 		<RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))Core</RootNamespace>
 		<AssemblyName>$(MSBuildProjectName)</AssemblyName>
-  </PropertyGroup>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+		<IsPackable>true</IsPackable>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)' != 'Release'">
 		<Version>$(Version)-$(Configuration.ToLower())</Version>
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)' == 'Debug'">
-		<IncludeSymbols>true</IncludeSymbols>
-		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -31,9 +29,9 @@
 		</None>
 	</ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="6.0.1" />
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="6.0.1" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="6.0.0" />
-  </ItemGroup>
+	</ItemGroup>
 
 </Project>
