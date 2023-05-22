@@ -356,14 +356,17 @@
                 case ProtocolType.Tcp:
                 case ProtocolType.Spx:
                 case ProtocolType.SpxII:
+                    Logger.LogTrace("Connection strategy selected based on configuration.");
                     serverStrategy = new ConnectionServerStrategy(
                         LoggerFactory.CreateLogger(typeof(NetworkListener)),
                         Certificate,
                         SslProtocols);
                     break;
 
+                    // Supported connection-less based protocols
                 case ProtocolType.Idp:
                 case ProtocolType.Udp:
+                    Logger.LogTrace("Connection-less strategy selected based on configuration.");
                     serverStrategy = new ConnectionlessServerStrategy(
                         LoggerFactory.CreateLogger(typeof(NetworkListener)));
                     break;
