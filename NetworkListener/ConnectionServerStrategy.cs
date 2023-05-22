@@ -130,23 +130,18 @@
                     }
                     finally
                     {
-                        // Disconnect
-                        try
-                        {
-                            socket.Disconnect(false);
-                        }
-                        finally
-                        {
-                            // Should we trigger client disconnected event
-                            if (!triggeredOnClientDisconnected)
-                            {
-                                // Trigger client disconnected event
-                                OnClientDisconnected(socket.RemoteEndPoint);
-                            }
-                        }
+                        // Get remote end-point
+                        var remoteEndPoint = socket.RemoteEndPoint;
 
                         // Dispose the client connection
                         DisposeClient(socket);
+
+                        // Should we trigger client disconnected event
+                        if (!triggeredOnClientDisconnected)
+                        {
+                            // Trigger client disconnected event
+                            OnClientDisconnected(remoteEndPoint);
+                        }
                     }
                 });
 
