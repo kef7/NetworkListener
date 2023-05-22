@@ -217,7 +217,7 @@
                 // Init and configure listener socket
                 try
                 {
-                    // Stop current listener if needed
+                    // Stop current socket listening if needed
                     if (ServerSocket is not null)
                     {
                         Logger.LogDebug("Tearing down old server socket");
@@ -232,7 +232,7 @@
                     // Build IP end point
                     ipEndPoint = new IPEndPoint(IPAddress, Port);
 
-                    // New-up listener
+                    // Init server socket
                     ServerSocket = serverStrategy.InitServer(ipEndPoint, SocketType, ProtocolType);
 
                     // Trigger started event
