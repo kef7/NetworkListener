@@ -74,6 +74,6 @@ steps:
       command: push
       packagesToPush: "$(Build.ArtifactStagingDirectory)/**/*.nupkg;$(Build.ArtifactStagingDirectory)/**/*.snupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg"
       nuGetFeedType: external
-      publishFeedCredentials: nuget.org
+      publishFeedCredentials: "$(nugetServiceConnectionName)"
       versioningScheme: off
       includeSymbols: true
