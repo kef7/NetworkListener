@@ -217,7 +217,7 @@
                 // Init and configure listener socket
                 try
                 {
-                    // Stop current listener if needed
+                    // Stop current socket listening if needed
                     if (ServerSocket is not null)
                     {
                         Logger.LogDebug("Tearing down old server socket");
@@ -232,7 +232,7 @@
                     // Build IP end point
                     ipEndPoint = new IPEndPoint(IPAddress, Port);
 
-                    // New-up listener
+                    // Init server socket
                     ServerSocket = serverStrategy.InitServer(ipEndPoint, SocketType, ProtocolType);
 
                     // Trigger started event
@@ -356,14 +356,17 @@
                 case ProtocolType.Tcp:
                 case ProtocolType.Spx:
                 case ProtocolType.SpxII:
+                    Logger.LogTrace("Connection strategy selected based on configuration.");
                     serverStrategy = new ConnectionServerStrategy(
                         LoggerFactory.CreateLogger(typeof(NetworkListener)),
                         Certificate,
                         SslProtocols);
                     break;
 
+                    // Supported connection-less based protocols
                 case ProtocolType.Idp:
                 case ProtocolType.Udp:
+                    Logger.LogTrace("Connection-less strategy selected based on configuration.");
                     serverStrategy = new ConnectionlessServerStrategy(
                         LoggerFactory.CreateLogger(typeof(NetworkListener)));
                     break;
