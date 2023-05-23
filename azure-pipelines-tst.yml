@@ -65,4 +65,3 @@ steps:
       publishVstsFeed: "$(feedName)-Debug"
       versioningScheme: off
       allowPackageConflicts: true
-      includeSymbols: true

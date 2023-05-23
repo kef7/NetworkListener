@@ -65,7 +65,6 @@ steps:
       publishVstsFeed: "$(feedName)"
       versioningScheme: off
       allowPackageConflicts: true
-      includeSymbols: true
 
   # Push package to external feed
   - task: NuGetCommand@2
@@ -76,4 +75,3 @@ steps:
       nuGetFeedType: external
       publishFeedCredentials: "$(nugetServiceConnectionName)"
       versioningScheme: off
-      includeSymbols: true
