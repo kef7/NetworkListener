@@ -1,4 +1,4 @@
-﻿namespace NetworkListenerCore
+﻿namespace NetworkListenerCore.ServerStrategies
 {
     using Microsoft.Extensions.Logging;
     using NetworkListenerCore.NetworkClientDataProcessors;
