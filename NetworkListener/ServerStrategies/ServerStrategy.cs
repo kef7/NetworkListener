@@ -7,6 +7,9 @@
     using System.Net.Sockets;
     using System.Threading.Tasks;
 
+    /// <summary>
+    /// Abstract base server strategy for initialization and processing server the server tasks
+    /// </summary>
     internal abstract class ServerStrategy : IServerStrategy
     {
         /// <summary>
