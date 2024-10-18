@@ -1,17 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net6.0</TargetFramework>
+		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<UserSecretsId>10a3d61c-0705-428a-bb90-cd48d0e7e0c8</UserSecretsId>
-		<Version>1.0.0-rc6</Version>
+		<Version>1.0.0</Version>
 		<Authors>kef7</Authors>
 		<Description>Multithreaded network client listener with injectable client processing and support for secured communications over SSL/TLS.</Description>
 		<RepositoryUrl>https://github.com/kef7/NetworkListener</RepositoryUrl>
 		<PackageReadmeFile>readme.md</PackageReadmeFile>
 		<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
-		<PackageTags>Network listener; socket listener;.NET 6</PackageTags>
+		<PackageTags>Network listener; socket listener</PackageTags>
 		<RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))Core</RootNamespace>
 		<AssemblyName>$(MSBuildProjectName)</AssemblyName>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
@@ -37,7 +37,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Extensions.Logging" Version="6.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.1" />
 	</ItemGroup>
 
 </Project>

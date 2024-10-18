@@ -1,4 +1,4 @@
-﻿namespace NetworkListenerCore
+﻿namespace NetworkListenerCore.ServerStrategies
 {
     using Microsoft.Extensions.Logging;
     using NetworkListenerCore.NetworkClientDataProcessors;
@@ -409,14 +409,14 @@
                     }
 
                     // Write waiting message
-                    if ((loopCntr % 10) == 0 || loopCntr == 0)
+                    if (loopCntr % 10 == 0 || loopCntr == 0)
                     {
                         Logger.LogDebug("Client [{ClientRemoteEndPoint}] - Waiting for data; currently on wait [{LoopCounter}]", clientSocket.RemoteEndPoint, loopCntr);
                     }
 
                     // Increment loop counter; reset if needed
                     loopCntr += 1;
-                    if (loopCntr >= (uint.MaxValue - 1))
+                    if (loopCntr >= uint.MaxValue - 1)
                     {
                         loopCntr = 0;
                     }

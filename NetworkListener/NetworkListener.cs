@@ -3,6 +3,7 @@
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Logging.Abstractions;
     using NetworkListenerCore.NetworkClientDataProcessors;
+    using NetworkListenerCore.ServerStrategies;
     using System;
     using System.Net;
     using System.Net.Sockets;
@@ -348,7 +349,7 @@
         private IServerStrategy GetServerStrategy()
         {
             IServerStrategy? serverStrategy = null;
-            
+
             switch (ProtocolType)
             {
                 // Supported connection based protocols
@@ -363,7 +364,7 @@
                         SslProtocols);
                     break;
 
-                    // Supported connection-less based protocols
+                // Supported connection-less based protocols
                 case ProtocolType.Idp:
                 case ProtocolType.Udp:
                     Logger.LogTrace("Connection-less strategy selected based on configuration.");
