@@ -9,6 +9,8 @@ pool:
 # Variables for build and pack
 variables:
   - group: "NetworkListener_VarGroup"
+  - name: "dotNetVersion"
+    value: "8.x"
   - name: "buildConfiguration"
     value: "Debug"
   - name: "projFilePath"

@@ -26,18 +26,25 @@ using var netListener = BuildNetworkListener();
 netListener.Listen(cts.Token);
 ```
 
-### NetworkListener Events
+## NetworkListenerBuilder Class
 
-The **NetworkListener** class has several events that can be utilized.
+The library comes with a builder class that will assist you in building a **NetworkListener** instance called, **NetworkListenerBuilder**. Call the Create() method to get a new instance of the builder itself, see below:
 
-| Event Name | Description |
-|-|-|
-| **ClientConnected** | Event that is triggered when a client connects |
-| **ClientDataReceived** | Event that is triggered when data is received from the client |
-| **ClientDisconnected** | Event that is triggered when a client disconnects |
-| **ClientError** | Event that is triggered on a client processing error |
-| **Started** | Event that is triggered when the listener starts |
-| **Stopped** | Event that is triggered when the listener stops |
+```c#
+// Create network listener builder; you can inject logging here in the Create() static method
+var netListenerBuilder = NetworkListenerBuilder.Create()
+    .UsingPort(9373)
+    .UsingNcdpFactory(() =>
+    {
+        // Custom simple client data processor based on MessageNetworkClientDataProcessor
+        return new SimpleMessageNetworkClientDataProcessor();
+    });
+
+// Build listener; default streaming TCP listener 
+var netListener = netListenerBuilder.Build();
+```
+
+The port to listen on and a factory function to generate your network client data processor is required before Build() can be called. The factory function is called for every client that connects to provide the client thread with the appropriate client data processor instance to process the client's data.
 
 ## INetworkClientDataProcessor Interface
 
@@ -59,25 +66,18 @@ There are several abstract classes, which implment **INetworkClientDataProcessor
 - **MessageNetworkClientDataProcessor** - Simple message which may contain end of read flags/marker.
 - **MllpNetworkClientDataProcessor** - Minimal Lower Layer Protocol, which is a common method of network communication that wrap a messages; derrives from **MessageNetworkClientDataProcessor**
 
-## NetworkListenerBuilder Class
+## NetworkListener Events
 
-The library comes with a builder class that will assist you in building a **NetworkListener** instance called, **NetworkListenerBuilder**. Call the Create() method to get a new instance of the builder itself, see below:
+The **NetworkListener** class has several events that can be utilized.
 
-```c#
-// Create network listener builder; you can inject logging here in the Create() static method
-var netListenerBuilder = NetworkListenerBuilder.Create()
-    .UsingPort(9373)
-    .UsingNcdpFactory(() =>
-    {
-        // Custom simple client data processor based on MessageNetworkClientDataProcessor
-        return new SimpleMessageNetworkClientDataProcessor();
-    });
-
-// Build listener; default streaming TCP listener 
-var netListener = netListenerBuilder.Build();
-```
-
-The port to listen on and a factory function to generate your network client data processor is required before Build() can be called. The factory function is called for every client that connects to provide the client thread with the appropriate client data processor instance to process the client's data.
+| Event Name | Description |
+|-|-|
+| **ClientConnected** | Event that is triggered when a client connects |
+| **ClientDataReceived** | Event that is triggered when data is received from the client |
+| **ClientDisconnected** | Event that is triggered when a client disconnects |
+| **ClientError** | Event that is triggered on a client processing error |
+| **Started** | Event that is triggered when the listener starts |
+| **Stopped** | Event that is triggered when the listener stops |
 
 ## SSL/TLS Support
 

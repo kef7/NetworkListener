@@ -1,4 +1,4 @@
-﻿namespace NetworkListenerCore
+﻿namespace NetworkListenerCore.ServerStrategies
 {
     using NetworkListenerCore.NetworkClientDataProcessors;
     using System.Net;
