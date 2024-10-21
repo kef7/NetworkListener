@@ -68,12 +68,13 @@ steps:
       versioningScheme: off
       allowPackageConflicts: true
 
-  # Push package to external feed
+  # Push package to nuget
+  # 409 error on push to nuget: https://github.com/microsoft/azure-pipelines-tasks/issues/1511
   - task: NuGetCommand@2
     displayName: "nuget push external feed"
     inputs:
       command: push
-      packagesToPush: "$(Build.ArtifactStagingDirectory)/**/*.nupkg;$(Build.ArtifactStagingDirectory)/**/*.snupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg"
+      packagesToPush: "$(Build.ArtifactStagingDirectory)/**/*.nupkg;-:**/*.symbols.nupkg;$(Build.ArtifactStagingDirectory)/**/*.snupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg"
       nuGetFeedType: external
       publishFeedCredentials: "$(nugetServiceConnectionName)"
       versioningScheme: off
